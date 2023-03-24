@@ -22,6 +22,8 @@ jobs:
   build:
     needs: bootstrap
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -97,7 +99,7 @@ jobs:
         run: printf "%s\n" "$(sed -rn "/CONFIG_SUB_REV = (.*)/,/LINUX_VER = (.*)/p" config.mak)" > realease_body.md
 
       - name: Create release - tag - assets
-        uses: ncipollo/release-action@v1.12.0
+        uses: ncipollo/release-action@v1
         with:
           prerelease: false
           artifacts: "build/${{ matrix.arch_type }}.tar.gz"
