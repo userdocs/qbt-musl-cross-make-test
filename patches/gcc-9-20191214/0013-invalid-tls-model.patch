@@ -1,0 +1,42 @@
+From 3cdc85bcbcf6efe253b99ad357f105e221f5e4e8 Mon Sep 17 00:00:00 2001
+From: Szabolcs Nagy <nsz@port70.net>
+Date: Sun, 21 Jul 2019 21:23:53 +0000
+Subject: [PATCH 13/13] invalid tls model
+
+don't use initial-exec tls in shared libraries on musl targets.
+---
+ libgomp/configure.tgt | 3 +++
+ libitm/configure.tgt  | 3 +++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/libgomp/configure.tgt b/libgomp/configure.tgt
+index b88bf72fe3d..747d0485bf8 100644
+--- a/libgomp/configure.tgt
++++ b/libgomp/configure.tgt
+@@ -17,6 +17,9 @@ if test $gcc_cv_have_tls = yes ; then
+     *-*-k*bsd*-gnu*)
+ 	;;
+ 
++    *-*-musl*)
++	;;
++
+     *-*-linux* | *-*-gnu*)
+ 	XCFLAGS="${XCFLAGS} -ftls-model=initial-exec -DUSING_INITIAL_EXEC_TLS"
+ 	;;
+diff --git a/libitm/configure.tgt b/libitm/configure.tgt
+index 4c0b602034b..65e1c83550a 100644
+--- a/libitm/configure.tgt
++++ b/libitm/configure.tgt
+@@ -31,6 +31,9 @@
+ if test "$gcc_cv_have_tls" = yes ; then
+   case "${target}" in
+ 
++    *-*-musl*)
++	;;
++
+     # For x86, we use slots in the TCB head for most of our TLS.
+     # The setup of those slots in beginTransaction can afford to
+     # use the global-dynamic model.
+-- 
+2.21.0
+

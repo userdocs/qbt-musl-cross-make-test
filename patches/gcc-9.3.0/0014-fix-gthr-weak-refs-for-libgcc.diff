@@ -1,0 +1,23 @@
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 0f15fda3612..e4d48883ccc 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -1470,3 +1470,10 @@ aarch64*-*-*)
+ 	tm_file="${tm_file} aarch64/value-unwind.h"
+ 	;;
+ esac
++
++case ${host} in
++*-*-musl*)
++  # The gthr weak references are unsafe with static linking
++  tmake_file="$tmake_file t-gthr-noweak"
++  ;;
++esac
+diff --git a/libgcc/config/t-gthr-noweak b/libgcc/config/t-gthr-noweak
+new file mode 100644
+index 00000000000..45a21e9361d
+--- /dev/null
++++ b/libgcc/config/t-gthr-noweak
+@@ -0,0 +1,2 @@
++# Don't use weak references for single-thread detection
++HOST_LIBGCC2_CFLAGS += -DGTHREAD_USE_WEAK=0

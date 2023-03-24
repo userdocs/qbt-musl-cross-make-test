@@ -1,0 +1,860 @@
+From 07f5f4c683879e844d20d0d4963bbaf1b7cd47b9 Mon Sep 17 00:00:00 2001
+From: Richard Henderson <rth@redhat.com>
+Date: Fri, 5 Oct 2018 11:41:41 +0900
+Subject: [PATCH 4/4] or1k: Add the l.muld, l.muldu, l.macu, l.msbu insns
+
+Also fix the incorrect definitions of multiply and divide carry and
+overflow float.
+
+Changes to the instructions are made in the .cpu file, then we
+regenerate the binutils and sim files.
+
+The changes also required a few fixups for tests and additional sim helpers.
+
+cpu/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+	    Stafford Horne  <shorne@gmail.com>
+
+	* or1korbis.cpu (insn-opcode-mac): Add opcodes for MACU and MSBU.
+	(insn-opcode-alu-regreg): Add opcodes for MULD and MULDU.
+	(l-mul): Fix overflow support and indentation.
+	(l-mulu): Fix overflow support and indentation.
+	(l-muld, l-muldu, l-msbu, l-macu): New instructions.
+	(l-div); Remove incorrect carry behavior.
+	(l-divu): Fix carry and overflow behavior.
+	(l-mac): Add overflow support.
+	(l-msb, l-msbu): Add carry and overflow support.
+
+opcodes/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+	    Stafford Horne  <shorne@gmail.com>
+
+	* or1k-desc.c: Regenerate.
+	* or1k-desc.h: Regenerate.
+	* or1k-opc.c: Regenerate.
+	* or1k-opc.h: Regenerate.
+	* or1k-opinst.c: Regenerate.
+
+sim/common/ChangeLog:
+
+yyyy-mm-dd  Stafford Horne  <shorne@gmail.com>
+
+	* cgen-ops.h (ADDCFDI): New function, add carry flag DI variant.
+	(ADDOFDI): New function, add overflow flag DI variant.
+	(SUBCFDI): New function, subtract carry flag DI variant.
+	(SUBOFDI): New function, subtract overflow flag DI variant.
+
+sim/ChangeLog:
+
+yyyy-mm-dd  Stafford Horne  <shorne@gmail.com>
+
+	* or1k/cpu.h: Regenerate.
+	* or1k/decode.c: Regenerate.
+	* or1k/decode.h: Regenerate.
+	* or1k/model.c: Regenerate.
+	* or1k/sem-switch.c: Regenerate.
+	* or1k/sem.c: Regenerate:
+
+sim/testsuite/sim/or1k/ChangeLog:
+
+yyyy-mm-dd  Stafford Horne  <shorne@gmail.com>
+
+	* div.S: Fix tests to match correct overflow/carry semantics.
+	* mul.S: Likewise.
+
+gas/ChangeLog:
+
+yyyy-mm-dd  Stafford Horne  <shorne@gmail.com>
+
+	* testsuite/gas/or1k/allinsn.s: Add instruction tests for
+	l.muld, l.muldu, l.macu, l.msb, l.msbu.
+	* testsuite/gas/or1k/allinsn.d: Add test results for new
+	instructions.
+---
+ cpu/ChangeLog                    |  13 ++
+ cpu/or1korbis.cpu                | 261 +++++++++++++++++----------
+ gas/ChangeLog                    |   7 +
+ gas/testsuite/gas/or1k/allinsn.d |  25 +++
+ gas/testsuite/gas/or1k/allinsn.s |  20 +++
+ opcodes/ChangeLog                |   9 +
+ opcodes/or1k-desc.c              |  24 ++-
+ opcodes/or1k-desc.h              |  11 +-
+ opcodes/or1k-opc.c               |  34 +++-
+ opcodes/or1k-opc.h               |  23 +--
+ opcodes/or1k-opinst.c            |  91 +++++++++-
+ sim/ChangeLog                    |   9 +
+ sim/common/ChangeLog             |   7 +
+ sim/common/cgen-ops.h            |  36 ++++
+ sim/or1k/cpu.h                   |  32 ++++
+ sim/or1k/decode.c                | 239 +++++++++++++++++++++++--
+ sim/or1k/decode.h                |  82 ++++-----
+ sim/or1k/model.c                 | 186 +++++++++++++++++++-
+ sim/or1k/sem-switch.c            | 281 +++++++++++++++++++++++------
+ sim/or1k/sem.c                   | 293 +++++++++++++++++++++++++------
+ sim/testsuite/sim/or1k/ChangeLog |   5 +
+ sim/testsuite/sim/or1k/div.S     |  12 +-
+ sim/testsuite/sim/or1k/mul.S     | 109 ++++++------
+ 23 files changed, 1454 insertions(+), 355 deletions(-)
+
+diff --git a/cpu/or1korbis.cpu b/cpu/or1korbis.cpu
+index 6fbf40ad99..094f0185a7 100644
+--- a/cpu/or1korbis.cpu
++++ b/cpu/or1korbis.cpu
+@@ -220,8 +220,10 @@
+ (define-normal-insn-enum insn-opcode-mac
+   "multiply/accumulate insn opcode enums" ((MACH ORBIS-MACHS))
+   OPC_MAC_ f-op-3-4
+-  (("MAC" #x1)
+-   ("MSB" #x2)
++  (("MAC"   #x1)
++   ("MSB"   #x2)
++   ("MACU"  #x3)
++   ("MSBU"  #x4)
+    )
+   )
+ 
+@@ -263,12 +265,14 @@
+    ("OR"    #x4)
+    ("XOR"   #x5)
+    ("MUL"   #x6)
++   ("MULD"  #x7)
+    ("SHROT" #x8)
+    ("DIV"   #x9)
+    ("DIVU"  #xA)
+    ("MULU"  #xB)
+    ("EXTBH" #xC)
+    ("EXTW"  #xD)
++   ("MULDU" #xD)
+    ("CMOV"  #xE)
+    ("FFL1"  #xF)
+    )
+@@ -595,7 +599,7 @@
+                (set UWI mac-machi 0)
+                )
+      ()
+-     )
++)
+ 
+ 
+ ; System releated instructions
+@@ -816,77 +820,93 @@
+ )
+ 
+ (dni (l-mul) "l.mul reg/reg/reg"
+-          ((MACH ORBIS-MACHS))
+-          ("l.mul $rD,$rA,$rB")
+-          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MUL)
+-          (sequence ()
+-                    (sequence ()
+-                              ; 2's complement overflow
+-                              (set BI sys-sr-ov (mul-o2flag WI rA rB))
+-                              ; 1's complement overflow
+-                              (set BI sys-sr-cy (mul-o1flag WI rA rB))
+-                              (set rD (mul WI rA rB))
+-                              )
+-                    (if (andif sys-sr-ov sys-sr-ove)
+-                        (raise-exception EXCEPT-RANGE))
+-                    )
+-          ()
++     ((MACH ORBIS-MACHS))
++     ("l.mul $rD,$rA,$rB")
++     (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MUL)
++     (sequence ()
++	(sequence ()
++	   (set BI sys-sr-ov (mul-o2flag WI rA rB))
++	   (set rD (mul WI rA rB))
++	)
++	(if (andif sys-sr-ov sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
++     )
++     ()
++)
++
++(dni (l-muld) "l.muld reg/reg"
++     ((MACH ORBIS-MACHS))
++     ("l.muld $rA,$rB")
++     (+ OPC_ALU (f-resv-25-5 0) rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULD)
++     (sequence ((DI result))
++	(set DI result (mul DI (ext DI rA) (ext DI rB)))
++	(set SI mac-machi (subword SI result 0))
++	(set SI mac-maclo (subword SI result 1))
++     )
++     ()
+ )
+ 
+ (dni (l-mulu) "l.mulu reg/reg/reg"
+-          ((MACH ORBIS-MACHS))
+-          ("l.mulu $rD,$rA,$rB")
+-          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULU)
+-          (sequence ()
+-                    (sequence ()
+-                              ; 2's complement overflow
+-                              (set BI sys-sr-ov 0)
+-                              ; 1's complement overflow
+-                              (set BI sys-sr-cy (mul-o1flag UWI rA rB))
+-                              (set rD (mul UWI rA rB))
+-                              )
+-                    (if (andif sys-sr-ov sys-sr-ove)
+-                        (raise-exception EXCEPT-RANGE))
+-                    )
+-          ()
++     ((MACH ORBIS-MACHS))
++     ("l.mulu $rD,$rA,$rB")
++     (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULU)
++     (sequence ()
++	(sequence ()
++	   (set BI sys-sr-cy (mul-o1flag UWI rA rB))
++	   (set rD (mul UWI rA rB))
++	)
++	(if (andif sys-sr-cy sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
++     )
++     ()
++)
++
++(dni (l-muldu) "l.muld reg/reg"
++     ((MACH ORBIS-MACHS))
++     ("l.muldu $rA,$rB")
++     (+ OPC_ALU (f-resv-25-5 0) rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULDU)
++     (sequence ((DI result))
++	(set DI result (mul DI (zext DI rA) (zext DI rB)))
++	(set SI mac-machi (subword SI result 0))
++	(set SI mac-maclo (subword SI result 1))
++     )
++     ()
+ )
+ 
+ (dni l-div "divide (signed)"
+-          ((MACH ORBIS-MACHS))
+-          "l.div $rD,$rA,$rB"
+-          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIV)
+-          (sequence ()
+-                    (if (ne rB 0)
+-                        (sequence ()
+-                                  (set BI sys-sr-cy 0)
+-                                  (set WI rD (div WI rA rB))
+-                                  )
+-                        (set BI sys-sr-cy 1)
+-                        )
+-                    (set BI sys-sr-ov 0)
+-                    (if (andif sys-sr-cy sys-sr-ove)
+-                        (raise-exception EXCEPT-RANGE))
+-                    )
+-          ()
++     ((MACH ORBIS-MACHS))
++     "l.div $rD,$rA,$rB"
++     (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIV)
++     (if (ne rB 0)
++	(sequence ()
++	   (set BI sys-sr-ov 0)
++	   (set WI rD (div WI rA rB))
++	)
++	(sequence ()
++	   (set BI sys-sr-ov 1)
++	   (if sys-sr-ove
++	      (raise-exception EXCEPT-RANGE))
++	)
++     )
++     ()
+ )
+ 
+ (dni l-divu "divide (unsigned)"
+-          ((MACH ORBIS-MACHS))
+-          "l.divu $rD,$rA,$rB"
+-          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIVU)
+-          (sequence ()
+-                    (if (ne rB 0)
+-                        (sequence ()
+-                                  (set BI sys-sr-cy 0)
+-                                  (set rD (udiv UWI rA rB))
+-                                  )
+-                        (set BI sys-sr-cy 1)
+-                        )
+-                    (set BI sys-sr-ov 0)
+-                    (if (andif sys-sr-cy sys-sr-ove)
+-                        (raise-exception EXCEPT-RANGE))
+-                    )
+-          ()
++     ((MACH ORBIS-MACHS))
++     "l.divu $rD,$rA,$rB"
++     (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIVU)
++     (if (ne rB 0)
++	(sequence ()
++	   (set BI sys-sr-cy 0)
++	   (set rD (udiv UWI rA rB))
++	)
++	(sequence ()
++	   (set BI sys-sr-cy 1)
++	   (if sys-sr-ove
++	       (raise-exception EXCEPT-RANGE))
++	)
++     )
++     ()
+ )
+ 
+ (dni l-ff1 "find first '1'"
+@@ -984,17 +1004,14 @@
+      (+ OPC_MULI rD rA simm16)
+      (sequence ()
+                (sequence ()
+-                         ; 2's complement overflow
+                          (set sys-sr-ov (mul-o2flag WI rA (ext WI simm16)))
+-                         ; 1's complement overflow
+-                         (set sys-sr-cy (mul-o1flag UWI rA (ext UWI simm16)))
+                          (set rD (mul WI rA (ext WI simm16)))
+                          )
+                (if (andif sys-sr-ov sys-sr-ove)
+                    (raise-exception EXCEPT-RANGE))
+                )
+      ()
+-     )
++)
+ 
+ (define-pmacro (extbh-insn mnemonic extop extmode truncmode)
+   (begin
+@@ -1118,42 +1135,100 @@
+      ((MACH ORBIS-MACHS))
+      "l.mac $rA,$rB"
+      (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MAC)
+-     (sequence ((WI prod) (DI result))
+-               (set WI prod (mul WI rA rB))
+-               (set DI result (add (join DI SI mac-machi mac-maclo) (ext DI prod)))
+-               (set SI mac-machi (subword SI result 0))
+-               (set SI mac-maclo (subword SI result 1))
+-               )
++     (sequence ()
++	(sequence ((DI prod) (DI mac) (DI result))
++	   (set DI prod (mul DI (ext DI rA) (ext DI rB)))
++	   (set DI mac (join DI SI mac-machi mac-maclo))
++	   (set DI result (add prod mac))
++	   (set SI mac-machi (subword SI result 0))
++	   (set SI mac-maclo (subword SI result 1))
++	   (set BI sys-sr-ov (addc-oflag prod mac 0))
++	)
++	(if (andif sys-sr-ov sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
++     )
+      ()
++)
++
++(dni l-maci
++     "l.maci reg/simm16"
++     ((MACH ORBIS-MACHS))
++     "l.maci $rA,${simm16}"
++     (+ OPC_MACI (f-resv-25-5 0) rA simm16)
++     (sequence ()
++	(sequence ((DI prod) (DI mac) (DI result))
++	   (set DI prod (mul DI (ext DI rA) (ext DI simm16)))
++	   (set DI mac (join DI SI mac-machi mac-maclo))
++	   (set DI result (add mac prod))
++	   (set SI mac-machi (subword SI result 0))
++	   (set SI mac-maclo (subword SI result 1))
++	   (set BI sys-sr-ov (addc-oflag prod mac 0))
++	)
++	(if (andif sys-sr-ov sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
+      )
++     ()
++)
++
++(dni l-macu
++     "l.macu reg/reg"
++     ((MACH ORBIS-MACHS))
++     "l.macu $rA,$rB"
++     (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MACU)
++     (sequence ()
++	(sequence ((DI prod) (DI mac) (DI result))
++	   (set DI prod (mul DI (zext DI rA) (zext DI rB)))
++	   (set DI mac (join DI SI mac-machi mac-maclo))
++	   (set DI result (add prod mac))
++	   (set SI mac-machi (subword SI result 0))
++	   (set SI mac-maclo (subword SI result 1))
++	   (set BI sys-sr-cy (addc-cflag prod mac 0))
++	)
++	(if (andif sys-sr-cy sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
++     )
++     ()
++)
+ 
+ (dni l-msb
+      "l.msb reg/reg"
+      ((MACH ORBIS-MACHS))
+      "l.msb $rA,$rB"
+      (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MSB)
+-     (sequence ((WI prod) (DI result))
+-               (set WI prod (mul WI rA rB))
+-               (set DI result (sub (join DI SI mac-machi mac-maclo) (ext DI prod)))
+-               (set SI mac-machi (subword SI result 0))
+-               (set SI mac-maclo (subword SI result 1))
+-               )
+-     ()
++     (sequence ()
++	(sequence ((DI prod) (DI mac) (DI result))
++	   (set DI prod (mul DI (ext DI rA) (ext DI rB)))
++	   (set DI mac (join DI SI mac-machi mac-maclo))
++	   (set DI result (sub mac prod))
++	   (set SI mac-machi (subword SI result 0))
++	   (set SI mac-maclo (subword SI result 1))
++	   (set BI sys-sr-ov (subc-oflag mac result 0))
++	)
++	(if (andif sys-sr-ov sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
+      )
++     ()
++)
+ 
+-(dni l-maci
+-     "l.maci reg/simm16"
++(dni l-msbu
++     "l.msbu reg/reg"
+      ((MACH ORBIS-MACHS))
+-     "l.maci $rA,${simm16}"
+-     (+ OPC_MACI (f-resv-25-5 0) rA simm16)
+-     (sequence ((WI prod) (DI result))
+-               (set WI prod (mul WI (ext WI simm16) rA))
+-               (set DI result (add (join DI SI mac-machi mac-maclo) (ext DI prod)))
+-               (set SI mac-machi (subword SI result 0))
+-               (set SI mac-maclo (subword SI result 1))
+-               )
+-     ()
++     "l.msbu $rA,$rB"
++     (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MSBU)
++     (sequence ()
++	(sequence ((DI prod) (DI mac) (DI result))
++	   (set DI prod (mul DI (zext DI rA) (zext DI rB)))
++	   (set DI mac (join DI SI mac-machi mac-maclo))
++	   (set DI result (sub mac prod))
++	   (set SI mac-machi (subword SI result 0))
++	   (set SI mac-maclo (subword SI result 1))
++	   (set BI sys-sr-cy (subc-cflag mac result 0))
++	)
++	(if (andif sys-sr-cy sys-sr-ove)
++	    (raise-exception EXCEPT-RANGE))
+      )
++     ()
++)
+ 
+ (define-pmacro (cust-insn cust-num)
+   (begin
+diff --git a/gas/testsuite/gas/or1k/allinsn.d b/gas/testsuite/gas/or1k/allinsn.d
+index a4ffe43f0b..4260498fdb 100644
+--- a/gas/testsuite/gas/or1k/allinsn.d
++++ b/gas/testsuite/gas/or1k/allinsn.d
+@@ -696,3 +696,28 @@ Disassembly of section \.text:
+ 			840: R_OR1K_PCREL_PG21	globaldata
+  844:	08 60 00 00 	l\.adrp r3,0 <localtext>
+ 			844: R_OR1K_PCREL_PG21	\.data
++
++00000848 <l_muld>:
++ 848:	e0 00 03 07 	l\.muld r0,r0
++ 84c:	e0 1f fb 07 	l\.muld r31,r31
++ 850:	e0 03 23 07 	l\.muld r3,r4
++
++00000854 <l_muldu>:
++ 854:	e0 00 03 0d 	l\.muldu r0,r0
++ 858:	e0 1f fb 0d 	l\.muldu r31,r31
++ 85c:	e0 03 23 0d 	l\.muldu r3,r4
++
++00000860 <l_macu>:
++ 860:	c4 00 00 03 	l\.macu r0,r0
++ 864:	c4 1f f8 03 	l\.macu r31,r31
++ 868:	c4 03 20 03 	l\.macu r3,r4
++
++0000086c <l_msb>:
++ 86c:	c4 00 00 02 	l\.msb r0,r0
++ 870:	c4 1f f8 02 	l\.msb r31,r31
++ 874:	c4 03 20 02 	l\.msb r3,r4
++
++00000878 <l_msbu>:
++ 878:	c4 00 00 04 	l\.msbu r0,r0
++ 87c:	c4 1f f8 04 	l\.msbu r31,r31
++ 880:	c4 03 20 04 	l\.msbu r3,r4
+diff --git a/gas/testsuite/gas/or1k/allinsn.s b/gas/testsuite/gas/or1k/allinsn.s
+index 55d703734e..e5a7906464 100644
+--- a/gas/testsuite/gas/or1k/allinsn.s
++++ b/gas/testsuite/gas/or1k/allinsn.s
+@@ -680,3 +680,23 @@ l_maci:
+ l_adrp:
+ 	l.adrp r3,globaldata
+ 	l.adrp r3,localdata
++l_muld:
++	l.muld r0,r0
++	l.muld r31,r31
++	l.muld r3,r4
++l_muldu:
++	l.muldu r0,r0
++	l.muldu r31,r31
++	l.muldu r3,r4
++l_macu:
++	l.macu r0,r0
++	l.macu r31,r31
++	l.macu r3,r4
++l_msb:
++	l.msb r0,r0
++	l.msb r31,r31
++	l.msb r3,r4
++l_msbu:
++	l.msbu r0,r0
++	l.msbu r31,r31
++	l.msbu r3,r4
+diff --git a/opcodes/or1k-desc.c b/opcodes/or1k-desc.c
+index 91c2fbd73d..f3c4e9ee23 100644
+--- a/opcodes/or1k-desc.c
++++ b/opcodes/or1k-desc.c
+@@ -1381,11 +1381,21 @@ static const CGEN_IBASE or1k_cgen_insn_table[MAX_INSNS] =
+     OR1K_INSN_L_MUL, "l-mul", "l.mul", 32,
+     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
++/* l.muld $rA,$rB */
++  {
++    OR1K_INSN_L_MULD, "l-muld", "l.muld", 32,
++    { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
++  },
+ /* l.mulu $rD,$rA,$rB */
+   {
+     OR1K_INSN_L_MULU, "l-mulu", "l.mulu", 32,
+     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
++/* l.muldu $rA,$rB */
++  {
++    OR1K_INSN_L_MULDU, "l-muldu", "l.muldu", 32,
++    { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
++  },
+ /* l.div $rD,$rA,$rB */
+   {
+     OR1K_INSN_L_DIV, "l-div", "l.div", 32,
+@@ -1576,14 +1586,24 @@ static const CGEN_IBASE or1k_cgen_insn_table[MAX_INSNS] =
+     OR1K_INSN_L_MAC, "l-mac", "l.mac", 32,
+     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
++/* l.maci $rA,${simm16} */
++  {
++    OR1K_INSN_L_MACI, "l-maci", "l.maci", 32,
++    { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
++  },
++/* l.macu $rA,$rB */
++  {
++    OR1K_INSN_L_MACU, "l-macu", "l.macu", 32,
++    { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
++  },
+ /* l.msb $rA,$rB */
+   {
+     OR1K_INSN_L_MSB, "l-msb", "l.msb", 32,
+     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
+-/* l.maci $rA,${simm16} */
++/* l.msbu $rA,$rB */
+   {
+-    OR1K_INSN_L_MACI, "l-maci", "l.maci", 32,
++    OR1K_INSN_L_MSBU, "l-msbu", "l.msbu", 32,
+     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
+ /* l.cust1 */
+diff --git a/opcodes/or1k-desc.h b/opcodes/or1k-desc.h
+index d84f0fa52a..040bd926c5 100644
+--- a/opcodes/or1k-desc.h
++++ b/opcodes/or1k-desc.h
+@@ -306,7 +306,7 @@ typedef enum insn_opcode_movehimacrc {
+ 
+ /* Enum declaration for multiply/accumulate insn opcode enums.  */
+ typedef enum insn_opcode_mac {
+-  OPC_MAC_MAC = 1, OPC_MAC_MSB = 2
++  OPC_MAC_MAC = 1, OPC_MAC_MSB = 2, OPC_MAC_MACU = 3, OPC_MAC_MSBU = 4
+ } INSN_OPCODE_MAC;
+ 
+ /* Enum declaration for shift/rotate insn opcode enums.  */
+@@ -327,9 +327,10 @@ typedef enum insn_opcode_extws {
+ /* Enum declaration for alu reg/reg insn opcode enums.  */
+ typedef enum insn_opcode_alu_regreg {
+   OPC_ALU_REGREG_ADD = 0, OPC_ALU_REGREG_ADDC = 1, OPC_ALU_REGREG_SUB = 2, OPC_ALU_REGREG_AND = 3
+- , OPC_ALU_REGREG_OR = 4, OPC_ALU_REGREG_XOR = 5, OPC_ALU_REGREG_MUL = 6, OPC_ALU_REGREG_SHROT = 8
+- , OPC_ALU_REGREG_DIV = 9, OPC_ALU_REGREG_DIVU = 10, OPC_ALU_REGREG_MULU = 11, OPC_ALU_REGREG_EXTBH = 12
+- , OPC_ALU_REGREG_EXTW = 13, OPC_ALU_REGREG_CMOV = 14, OPC_ALU_REGREG_FFL1 = 15
++ , OPC_ALU_REGREG_OR = 4, OPC_ALU_REGREG_XOR = 5, OPC_ALU_REGREG_MUL = 6, OPC_ALU_REGREG_MULD = 7
++ , OPC_ALU_REGREG_SHROT = 8, OPC_ALU_REGREG_DIV = 9, OPC_ALU_REGREG_DIVU = 10, OPC_ALU_REGREG_MULU = 11
++ , OPC_ALU_REGREG_EXTBH = 12, OPC_ALU_REGREG_EXTW = 13, OPC_ALU_REGREG_MULDU = 13, OPC_ALU_REGREG_CMOV = 14
++ , OPC_ALU_REGREG_FFL1 = 15
+ } INSN_OPCODE_ALU_REGREG;
+ 
+ /* Enum declaration for setflag insn opcode enums.  */
+@@ -632,7 +633,7 @@ typedef enum cgen_operand_type {
+ #define MAX_OPERANDS 32
+ 
+ /* Maximum number of operands referenced by any insn.  */
+-#define MAX_OPERAND_INSTANCES 9
++#define MAX_OPERAND_INSTANCES 10
+ 
+ /* Insn attribute indices.  */
+ 
+diff --git a/opcodes/or1k-opc.c b/opcodes/or1k-opc.c
+index ba820a4c57..337dda5306 100644
+--- a/opcodes/or1k-opc.c
++++ b/opcodes/or1k-opc.c
+@@ -116,6 +116,10 @@ static const CGEN_IFMT ifmt_l_and ATTRIBUTE_UNUSED = {
+   32, 32, 0xfc0007ff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_7) }, { F (F_OP_3_4) }, { 0 } }
+ };
+ 
++static const CGEN_IFMT ifmt_l_muld ATTRIBUTE_UNUSED = {
++  32, 32, 0xffe007ff, { { F (F_OPCODE) }, { F (F_RESV_25_5) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_7) }, { F (F_OP_3_4) }, { 0 } }
++};
++
+ static const CGEN_IFMT ifmt_l_exths ATTRIBUTE_UNUSED = {
+   32, 32, 0xfc00ffff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_RESV_15_6) }, { F (F_OP_9_4) }, { F (F_RESV_5_2) }, { F (F_OP_3_4) }, { 0 } }
+ };
+@@ -457,12 +461,24 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
+     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
+     & ifmt_l_and, { 0xe0000306 }
+   },
++/* l.muld $rA,$rB */
++  {
++    { 0, 0, 0, 0 },
++    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
++    & ifmt_l_muld, { 0xe0000307 }
++  },
+ /* l.mulu $rD,$rA,$rB */
+   {
+     { 0, 0, 0, 0 },
+     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
+     & ifmt_l_and, { 0xe000030b }
+   },
++/* l.muldu $rA,$rB */
++  {
++    { 0, 0, 0, 0 },
++    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
++    & ifmt_l_muld, { 0xe000030d }
++  },
+ /* l.div $rD,$rA,$rB */
+   {
+     { 0, 0, 0, 0 },
+@@ -691,17 +707,29 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
+     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+     & ifmt_l_mac, { 0xc4000001 }
+   },
++/* l.maci $rA,${simm16} */
++  {
++    { 0, 0, 0, 0 },
++    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
++    & ifmt_l_maci, { 0x4c000000 }
++  },
++/* l.macu $rA,$rB */
++  {
++    { 0, 0, 0, 0 },
++    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
++    & ifmt_l_mac, { 0xc4000003 }
++  },
+ /* l.msb $rA,$rB */
+   {
+     { 0, 0, 0, 0 },
+     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+     & ifmt_l_mac, { 0xc4000002 }
+   },
+-/* l.maci $rA,${simm16} */
++/* l.msbu $rA,$rB */
+   {
+     { 0, 0, 0, 0 },
+-    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
+-    & ifmt_l_maci, { 0x4c000000 }
++    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
++    & ifmt_l_mac, { 0xc4000004 }
+   },
+ /* l.cust1 */
+   {
+diff --git a/opcodes/or1k-opc.h b/opcodes/or1k-opc.h
+index d2a377257f..66d077361f 100644
+--- a/opcodes/or1k-opc.h
++++ b/opcodes/or1k-opc.h
+@@ -51,17 +51,18 @@ typedef enum cgen_insn_type {
+  , OR1K_INSN_L_SLLI, OR1K_INSN_L_SRL, OR1K_INSN_L_SRLI, OR1K_INSN_L_SRA
+  , OR1K_INSN_L_SRAI, OR1K_INSN_L_ROR, OR1K_INSN_L_RORI, OR1K_INSN_L_AND
+  , OR1K_INSN_L_OR, OR1K_INSN_L_XOR, OR1K_INSN_L_ADD, OR1K_INSN_L_SUB
+- , OR1K_INSN_L_ADDC, OR1K_INSN_L_MUL, OR1K_INSN_L_MULU, OR1K_INSN_L_DIV
+- , OR1K_INSN_L_DIVU, OR1K_INSN_L_FF1, OR1K_INSN_L_FL1, OR1K_INSN_L_ANDI
+- , OR1K_INSN_L_ORI, OR1K_INSN_L_XORI, OR1K_INSN_L_ADDI, OR1K_INSN_L_ADDIC
+- , OR1K_INSN_L_MULI, OR1K_INSN_L_EXTHS, OR1K_INSN_L_EXTBS, OR1K_INSN_L_EXTHZ
+- , OR1K_INSN_L_EXTBZ, OR1K_INSN_L_EXTWS, OR1K_INSN_L_EXTWZ, OR1K_INSN_L_CMOV
+- , OR1K_INSN_L_SFGTS, OR1K_INSN_L_SFGTSI, OR1K_INSN_L_SFGTU, OR1K_INSN_L_SFGTUI
+- , OR1K_INSN_L_SFGES, OR1K_INSN_L_SFGESI, OR1K_INSN_L_SFGEU, OR1K_INSN_L_SFGEUI
+- , OR1K_INSN_L_SFLTS, OR1K_INSN_L_SFLTSI, OR1K_INSN_L_SFLTU, OR1K_INSN_L_SFLTUI
+- , OR1K_INSN_L_SFLES, OR1K_INSN_L_SFLESI, OR1K_INSN_L_SFLEU, OR1K_INSN_L_SFLEUI
+- , OR1K_INSN_L_SFEQ, OR1K_INSN_L_SFEQI, OR1K_INSN_L_SFNE, OR1K_INSN_L_SFNEI
+- , OR1K_INSN_L_MAC, OR1K_INSN_L_MSB, OR1K_INSN_L_MACI, OR1K_INSN_L_CUST1
++ , OR1K_INSN_L_ADDC, OR1K_INSN_L_MUL, OR1K_INSN_L_MULD, OR1K_INSN_L_MULU
++ , OR1K_INSN_L_MULDU, OR1K_INSN_L_DIV, OR1K_INSN_L_DIVU, OR1K_INSN_L_FF1
++ , OR1K_INSN_L_FL1, OR1K_INSN_L_ANDI, OR1K_INSN_L_ORI, OR1K_INSN_L_XORI
++ , OR1K_INSN_L_ADDI, OR1K_INSN_L_ADDIC, OR1K_INSN_L_MULI, OR1K_INSN_L_EXTHS
++ , OR1K_INSN_L_EXTBS, OR1K_INSN_L_EXTHZ, OR1K_INSN_L_EXTBZ, OR1K_INSN_L_EXTWS
++ , OR1K_INSN_L_EXTWZ, OR1K_INSN_L_CMOV, OR1K_INSN_L_SFGTS, OR1K_INSN_L_SFGTSI
++ , OR1K_INSN_L_SFGTU, OR1K_INSN_L_SFGTUI, OR1K_INSN_L_SFGES, OR1K_INSN_L_SFGESI
++ , OR1K_INSN_L_SFGEU, OR1K_INSN_L_SFGEUI, OR1K_INSN_L_SFLTS, OR1K_INSN_L_SFLTSI
++ , OR1K_INSN_L_SFLTU, OR1K_INSN_L_SFLTUI, OR1K_INSN_L_SFLES, OR1K_INSN_L_SFLESI
++ , OR1K_INSN_L_SFLEU, OR1K_INSN_L_SFLEUI, OR1K_INSN_L_SFEQ, OR1K_INSN_L_SFEQI
++ , OR1K_INSN_L_SFNE, OR1K_INSN_L_SFNEI, OR1K_INSN_L_MAC, OR1K_INSN_L_MACI
++ , OR1K_INSN_L_MACU, OR1K_INSN_L_MSB, OR1K_INSN_L_MSBU, OR1K_INSN_L_CUST1
+  , OR1K_INSN_L_CUST2, OR1K_INSN_L_CUST3, OR1K_INSN_L_CUST4, OR1K_INSN_L_CUST5
+  , OR1K_INSN_L_CUST6, OR1K_INSN_L_CUST7, OR1K_INSN_L_CUST8, OR1K_INSN_LF_ADD_S
+  , OR1K_INSN_LF_ADD_D, OR1K_INSN_LF_SUB_S, OR1K_INSN_LF_SUB_D, OR1K_INSN_LF_MUL_S
+diff --git a/opcodes/or1k-opinst.c b/opcodes/or1k-opinst.c
+index c267efb6c4..53268e21f4 100644
+--- a/opcodes/or1k-opinst.c
++++ b/opcodes/or1k-opinst.c
+@@ -278,15 +278,53 @@ static const CGEN_OPINST sfmt_l_addc_ops[] ATTRIBUTE_UNUSED = {
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
+-static const CGEN_OPINST sfmt_l_div_ops[] ATTRIBUTE_UNUSED = {
++static const CGEN_OPINST sfmt_l_mul_ops[] ATTRIBUTE_UNUSED = {
+   { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
+-  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
++  { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { INPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, 0 },
++  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
++static const CGEN_OPINST sfmt_l_muld_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
++  { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { OUTPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
++static const CGEN_OPINST sfmt_l_mulu_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
+   { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
+   { INPUT, "sys_sr_cy", HW_H_SYS_SR_CY, CGEN_MODE_UDI, 0, 0, 0 },
+   { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, 0 },
++  { OUTPUT, "sys_sr_cy", HW_H_SYS_SR_CY, CGEN_MODE_UDI, 0, 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
++static const CGEN_OPINST sfmt_l_div_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, COND_REF },
++  { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, COND_REF },
++  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
++static const CGEN_OPINST sfmt_l_divu_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, COND_REF },
++  { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, COND_REF },
+   { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, COND_REF },
+   { OUTPUT, "sys_sr_cy", HW_H_SYS_SR_CY, CGEN_MODE_UDI, 0, 0, COND_REF },
+-  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
+@@ -328,6 +366,17 @@ static const CGEN_OPINST sfmt_l_addic_ops[] ATTRIBUTE_UNUSED = {
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
++static const CGEN_OPINST sfmt_l_muli_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
++  { INPUT, "simm16", HW_H_SIMM16, CGEN_MODE_INT, OP_ENT (SIMM16), 0, 0 },
++  { INPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, 0 },
++  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
+ static const CGEN_OPINST sfmt_l_exths_ops[] ATTRIBUTE_UNUSED = {
+   { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
+   { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, 0 },
+@@ -359,20 +408,42 @@ static const CGEN_OPINST sfmt_l_sfgtsi_ops[] ATTRIBUTE_UNUSED = {
+ static const CGEN_OPINST sfmt_l_mac_ops[] ATTRIBUTE_UNUSED = {
+   { INPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
+   { INPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
+   { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
+   { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { INPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
+   { OUTPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
+   { OUTPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
+ static const CGEN_OPINST sfmt_l_maci_ops[] ATTRIBUTE_UNUSED = {
+   { INPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
+   { INPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
+   { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
+   { INPUT, "simm16", HW_H_SIMM16, CGEN_MODE_INT, OP_ENT (SIMM16), 0, 0 },
++  { INPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
+   { OUTPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
+   { OUTPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "sys_sr_ov", HW_H_SYS_SR_OV, CGEN_MODE_UDI, 0, 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
++static const CGEN_OPINST sfmt_l_macu_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, COND_REF },
++  { INPUT, "rA", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RA), 0, 0 },
++  { INPUT, "rB", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RB), 0, 0 },
++  { INPUT, "sys_sr_cy", HW_H_SYS_SR_CY, CGEN_MODE_UDI, 0, 0, 0 },
++  { INPUT, "sys_sr_ove", HW_H_SYS_SR_OVE, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "mac_machi", HW_H_MAC_MACHI, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "mac_maclo", HW_H_MAC_MACLO, CGEN_MODE_UDI, 0, 0, 0 },
++  { OUTPUT, "sys_sr_cy", HW_H_SYS_SR_CY, CGEN_MODE_UDI, 0, 0, 0 },
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
+@@ -502,10 +573,12 @@ static const CGEN_OPINST *or1k_cgen_opinst_table[MAX_INSNS] = {
+   & sfmt_l_add_ops[0],
+   & sfmt_l_add_ops[0],
+   & sfmt_l_addc_ops[0],
+-  & sfmt_l_add_ops[0],
+-  & sfmt_l_add_ops[0],
+-  & sfmt_l_div_ops[0],
++  & sfmt_l_mul_ops[0],
++  & sfmt_l_muld_ops[0],
++  & sfmt_l_mulu_ops[0],
++  & sfmt_l_muld_ops[0],
+   & sfmt_l_div_ops[0],
++  & sfmt_l_divu_ops[0],
+   & sfmt_l_ff1_ops[0],
+   & sfmt_l_ff1_ops[0],
+   & sfmt_l_mfspr_ops[0],
+@@ -513,7 +586,7 @@ static const CGEN_OPINST *or1k_cgen_opinst_table[MAX_INSNS] = {
+   & sfmt_l_xori_ops[0],
+   & sfmt_l_addi_ops[0],
+   & sfmt_l_addic_ops[0],
+-  & sfmt_l_addi_ops[0],
++  & sfmt_l_muli_ops[0],
+   & sfmt_l_exths_ops[0],
+   & sfmt_l_exths_ops[0],
+   & sfmt_l_exths_ops[0],
+@@ -542,8 +615,10 @@ static const CGEN_OPINST *or1k_cgen_opinst_table[MAX_INSNS] = {
+   & sfmt_l_sfgts_ops[0],
+   & sfmt_l_sfgtsi_ops[0],
+   & sfmt_l_mac_ops[0],
+-  & sfmt_l_mac_ops[0],
+   & sfmt_l_maci_ops[0],
++  & sfmt_l_macu_ops[0],
++  & sfmt_l_mac_ops[0],
++  & sfmt_l_macu_ops[0],
+   & sfmt_l_msync_ops[0],
+   & sfmt_l_msync_ops[0],
+   & sfmt_l_msync_ops[0],
+-- 
+2.18.1
+

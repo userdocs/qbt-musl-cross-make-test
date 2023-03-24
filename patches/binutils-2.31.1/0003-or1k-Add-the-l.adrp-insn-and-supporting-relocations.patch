@@ -1,0 +1,2680 @@
+From c8e98e3692cec125b92c995d8f881d9bdf1fac00 Mon Sep 17 00:00:00 2001
+From: Stafford Horne <shorne@gmail.com>
+Date: Fri, 5 Oct 2018 11:41:41 +0900
+Subject: [PATCH 3/4] or1k: Add the l.adrp insn and supporting relocations
+
+This patch adds the new instruction and relocation as per proposal:
+   https://openrisc.io/proposals/ladrp
+
+This is to be added to the spec in an upcoming revision.  The new instruction
+l.adrp loads the page offset of the current instruction offset by
+a 21-bit immediate shifted left 13-bits.  This is meant to be used with
+a 13-bit lower bit page offset.  This allows us to free up the got
+register r16.
+
+  l.adrp  r3, foo
+  l.ori   r4, r3, po(foo)
+  l.lbz   r5, po(foo)(r3)
+  l.sb    po(foo)(r3), r6
+
+The relocations we add are:
+
+ - BFD_RELOC_OR1K_PLTA26	For PLT jump relocation with PLT entry
+   asm: plta()			implemented using l.ardp, meaning
+				no need for r16 (the GOT reg)
+
+ - BFD_RELOC_OR1K_GOT_PG21	Upper 21-bit Page offset got address
+   asm: got()
+ - BFD_RELOC_OR1K_TLS_GD_PG21	Upper 21-bit Page offset with TLS General
+   asm: tlsgd()			Dynamic calculation
+ - BFD_RELOC_OR1K_TLS_LDM_PG21	Upper 21-bit Page offset with TLS local
+   asm: tlsldm()		dynamic calculation
+ - BFD_RELOC_OR1K_TLS_IE_PG21	Upper 21-bit Page offset with TLS Initial
+   asm: gottp() 		Executable calculation
+ - BFD_RELOC_OR1K_PCREL_PG21	Default relocation for disp21 (l.adrp
+				instructions)
+
+ - BFD_RELOC_OR1K_LO13		low 13-bit page offset relocation
+   asm: po()			i.e. mem loads, addi etc
+ - BFD_RELOC_OR1K_SLO13		low 13-bit page offset relocation
+   asm: po()			i.e. mem stores, with split immediate
+ - BFD_RELOC_OR1K_GOT_LO13,	low 13-bit page offset with GOT calcs
+   asm: gotpo()
+ - BFD_RELOC_OR1K_TLS_GD_LO13	Lower 13-bit offset with TLS GD calcs
+   asm: tlsgdpo()
+ - BFD_RELOC_OR1K_TLS_LDM_LO13	Lower 13-bit offset with TLS LD calcs
+   asm: tlsldmpo()
+ - BFD_RELOC_OR1K_TLS_IE_LO13	Lower 13-bit offset with TLS IE calcs
+   asm: gottppo()
+
+bfd/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* bfd-in2.h: Regenerated.
+	* elf32-or1k.c: (or1k_elf_howto_table): Fix formatting for
+	R_OR1K_PLT26, Add R_OR1K_PCREL_PG21, R_OR1K_GOT_PG21,
+	R_OR1K_TLS_GD_PG21, R_OR1K_TLS_LDM_PG21, R_OR1K_TLS_IE_PG21,
+	R_OR1K_LO13, R_OR1K_GOT_LO13, R_OR1K_TLS_GD_LO13, R_OR1K_TLS_LDM_LO13,
+	R_OR1K_TLS_IE_LO13, R_OR1K_SLO13, R_OR1K_PLTA26.
+	(or1k_reloc_map): Add BFD_RELOC_OR1K_PCREL_PG21,
+	BFD_RELOC_OR1K_GOT_PG21, BFD_RELOC_OR1K_TLS_GD_PG21,
+	BFD_RELOC_OR1K_TLS_LDM_PG21, BFD_RELOC_OR1K_TLS_IE_PG21,
+	BFD_RELOC_OR1K_LO13, BFD_RELOC_OR1K_GOT_LO13,
+	BFD_RELOC_OR1K_TLS_GD_LO13, BFD_RELOC_OR1K_TLS_GD_LO13,
+	BFD_RELOC_OR1K_TLS_LDM_LO13, BFD_RELOC_OR1K_TLS_IE_LO13,
+	BFD_RELOC_OR1K_SLO13, BFD_RELOC_OR1K_PLTA26.
+	(elf_or1k_link_hash_table): Add field saw_plta.
+	(or1k_final_link_relocate): Add value calculations for new relocations.
+	(or1k_elf_relocate_section): Add section relocations for new
+	relocations.
+	(or1k_write_plt_entry): New function.
+	(or1k_elf_finish_dynamic_sections): Add support for PLTA relocations
+	using new l.adrp instruction.  Cleanup PLT relocation code generation.
+	* libbfd.h: Regenerated.
+	* reloc.c: Add BFD_RELOC_OR1K_PCREL_PG21, BFD_RELOC_OR1K_LO13,
+	BFD_RELOC_OR1K_SLO13, BFD_RELOC_OR1K_GOT_PG21, BFD_RELOC_OR1K_GOT_LO13,
+	BFD_RELOC_OR1K_PLTA26, BFD_RELOC_OR1K_TLS_GD_PG21,
+	BFD_RELOC_OR1K_TLS_GD_LO13, BFD_RELOC_OR1K_TLS_LDM_PG21,
+	BFD_RELOC_OR1K_TLS_LDM_LO13, BFD_RELOC_OR1K_TLS_IE_PG21,
+	BFD_RELOC_OR1K_TLS_IE_LO13.
+
+cpu/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* or1k.opc (parse_disp26): Add support for plta() relocations.
+	(parse_disp21): New function.
+	(or1k_rclass): New enum.
+	(or1k_rtype): New enum.
+	(or1k_imm16_relocs): Define new PO and SPO relocation mappings.
+	(parse_reloc): Add new po(), gotpo() and gottppo() for LO13 relocations.
+	(parse_imm16): Add support for the new 21bit and 13bit relocations.
+	* or1korbis.cpu (f-disp26): Don't assume SI.
+	(f-disp21): New pc-relative 21-bit 13 shifted to right.
+	(insn-opcode): Add ADRP.
+	(l-adrp): New instruction.
+
+gas/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* config/tc-or1k.c (or1k_apply_fix): Add BFD_RELOC_OR1K_TLS_GD_PG21,
+	BFD_RELOC_OR1K_TLS_GD_LO13, BFD_RELOC_OR1K_TLS_LDM_PG21,
+	BFD_RELOC_OR1K_TLS_LDM_LO13, BFD_RELOC_OR1K_TLS_IE_PG21,
+	BFD_RELOC_OR1K_TLS_IE_LO13.
+	* testsuite/gas/or1k/allinsn.s: Add test for l.adrp.
+	* testsuite/gas/or1k/allinsn.d: Add test results for new
+	instructions.
+	* testsuite/gas/or1k/reloc-1.s: Add tests to generate
+	R_OR1K_PLTA26, R_OR1K_GOT_PG21, R_OR1K_TLS_GD_PG21, R_OR1K_TLS_LDM_PG21,
+	R_OR1K_TLS_IE_PG21, R_OR1K_LO13, R_OR1K_GOT_LO13, R_OR1K_TLS_GD_LO13,
+	R_OR1K_TLD_LDM_LO13, R_OR1K_TLS_IE_LO13, R_OR1K_LO13, R_OR1K_SLO13
+	relocations.
+	* testsuite/gas/or1k/reloc-1.d: Add relocation results for
+	tests.
+	* testsuite/gas/or1k/reloc-2.s: Add negative tests for store to
+	gotpo().
+	* testsuite/gas/or1k/reloc-2.l: Add expected error test results.
+
+ld/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* testsuite/ld-or1k/or1k.exp: Add test cases for plt generation.
+	* testsuite/ld-or1k/plt1.dd: New file.
+	* testsuite/ld-or1k/plt1.s: New file.
+	* testsuite/ld-or1k/plt1.x.dd: New file.
+	* testsuite/ld-or1k/plta1.dd: New file.
+	* testsuite/ld-or1k/plta1.s: New file.
+	* testsuite/ld-or1k/pltlib.s: New file.
+
+include/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* elf/or1k.h (elf_or1k_reloc_type): Add R_OR1K_PCREL_PG21,
+	R_OR1K_GOT_PG21, R_OR1K_TLS_GD_PG21, R_OR1K_TLS_LDM_PG21,
+	R_OR1K_TLS_IE_PG21, R_OR1K_LO13, R_OR1K_GOT_LO13,
+	R_OR1K_TLS_GD_LO13, R_OR1K_TLS_LDM_LO13, R_OR1K_TLS_IE_LO13,
+	R_OR1K_SLO13, R_OR1K_PLTA26.
+
+opcodes/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* or1k-asm.c: Regenerated.
+	* or1k-desc.c: Regenerated.
+	* or1k-desc.h: Regenerated.
+	* or1k-dis.c: Regenerated.
+	* or1k-ibld.c: Regenerated.
+	* or1k-opc.c: Regenerated.
+	* or1k-opc.h: Regenerated.
+	* or1k-opinst.c: Regenerated.
+---
+ bfd/ChangeLog                    |  30 ++
+ bfd/bfd-in2.h                    |  12 +
+ bfd/elf32-or1k.c                 | 526 +++++++++++++++++++++++--------
+ bfd/libbfd.h                     |  12 +
+ bfd/reloc.c                      |  24 ++
+ cpu/ChangeLog                    |  14 +
+ cpu/or1k.opc                     | 226 +++++++++----
+ cpu/or1korbis.cpu                |  35 +-
+ gas/ChangeLog                    |  20 ++
+ gas/config/tc-or1k.c             |   6 +
+ gas/testsuite/gas/or1k/allinsn.d |   6 +
+ gas/testsuite/gas/or1k/allinsn.s |   3 +
+ gas/testsuite/gas/or1k/reloc-1.d |  16 +
+ gas/testsuite/gas/or1k/reloc-1.s |  20 ++
+ gas/testsuite/gas/or1k/reloc-2.l |   1 +
+ gas/testsuite/gas/or1k/reloc-2.s |   1 +
+ include/ChangeLog                |   8 +
+ include/elf/or1k.h               |  12 +
+ ld/ChangeLog                     |  10 +
+ ld/testsuite/ld-or1k/or1k.exp    |  22 ++
+ ld/testsuite/ld-or1k/plt1.dd     |  27 ++
+ ld/testsuite/ld-or1k/plt1.s      |  11 +
+ ld/testsuite/ld-or1k/plt1.x.dd   |  27 ++
+ ld/testsuite/ld-or1k/plta1.dd    |  27 ++
+ ld/testsuite/ld-or1k/plta1.s     |  11 +
+ ld/testsuite/ld-or1k/pltlib.s    |  12 +
+ opcodes/ChangeLog                |  11 +
+ opcodes/or1k-asm.c               | 286 ++++++++++++-----
+ opcodes/or1k-desc.c              |  10 +
+ opcodes/or1k-desc.h              |  37 +--
+ opcodes/or1k-dis.c               |   3 +
+ opcodes/or1k-ibld.c              |  29 +-
+ opcodes/or1k-opc.c               |  10 +
+ opcodes/or1k-opc.h               |  64 ++--
+ opcodes/or1k-opinst.c            |   7 +
+ 35 files changed, 1251 insertions(+), 325 deletions(-)
+ create mode 100644 ld/testsuite/ld-or1k/plt1.dd
+ create mode 100644 ld/testsuite/ld-or1k/plt1.s
+ create mode 100644 ld/testsuite/ld-or1k/plt1.x.dd
+ create mode 100644 ld/testsuite/ld-or1k/plta1.dd
+ create mode 100644 ld/testsuite/ld-or1k/plta1.s
+ create mode 100644 ld/testsuite/ld-or1k/pltlib.s
+
+diff --git a/bfd/bfd-in2.h b/bfd/bfd-in2.h
+index cc112f1b49..662ef41a47 100644
+--- a/bfd/bfd-in2.h
++++ b/bfd/bfd-in2.h
+@@ -5473,10 +5473,16 @@ then it may be truncated to 8 bits.  */
+ /* OpenRISC 1000 Relocations.  */
+   BFD_RELOC_OR1K_REL_26,
+   BFD_RELOC_OR1K_SLO16,
++  BFD_RELOC_OR1K_PCREL_PG21,
++  BFD_RELOC_OR1K_LO13,
++  BFD_RELOC_OR1K_SLO13,
+   BFD_RELOC_OR1K_GOTPC_HI16,
+   BFD_RELOC_OR1K_GOTPC_LO16,
+   BFD_RELOC_OR1K_GOT16,
++  BFD_RELOC_OR1K_GOT_PG21,
++  BFD_RELOC_OR1K_GOT_LO13,
+   BFD_RELOC_OR1K_PLT26,
++  BFD_RELOC_OR1K_PLTA26,
+   BFD_RELOC_OR1K_GOTOFF_SLO16,
+   BFD_RELOC_OR1K_COPY,
+   BFD_RELOC_OR1K_GLOB_DAT,
+@@ -5484,13 +5490,19 @@ then it may be truncated to 8 bits.  */
+   BFD_RELOC_OR1K_RELATIVE,
+   BFD_RELOC_OR1K_TLS_GD_HI16,
+   BFD_RELOC_OR1K_TLS_GD_LO16,
++  BFD_RELOC_OR1K_TLS_GD_PG21,
++  BFD_RELOC_OR1K_TLS_GD_LO13,
+   BFD_RELOC_OR1K_TLS_LDM_HI16,
+   BFD_RELOC_OR1K_TLS_LDM_LO16,
++  BFD_RELOC_OR1K_TLS_LDM_PG21,
++  BFD_RELOC_OR1K_TLS_LDM_LO13,
+   BFD_RELOC_OR1K_TLS_LDO_HI16,
+   BFD_RELOC_OR1K_TLS_LDO_LO16,
+   BFD_RELOC_OR1K_TLS_IE_HI16,
+   BFD_RELOC_OR1K_TLS_IE_AHI16,
+   BFD_RELOC_OR1K_TLS_IE_LO16,
++  BFD_RELOC_OR1K_TLS_IE_PG21,
++  BFD_RELOC_OR1K_TLS_IE_LO13,
+   BFD_RELOC_OR1K_TLS_LE_HI16,
+   BFD_RELOC_OR1K_TLS_LE_AHI16,
+   BFD_RELOC_OR1K_TLS_LE_LO16,
+diff --git a/bfd/elf32-or1k.c b/bfd/elf32-or1k.c
+index 451253d0e7..a2b0ff147f 100644
+--- a/bfd/elf32-or1k.c
++++ b/bfd/elf32-or1k.c
+@@ -29,31 +29,14 @@
+ 
+ #define N_ONES(X)	(((bfd_vma)2 << (X)) - 1)
+ 
+-#define PLT_ENTRY_SIZE 20
+-
+-#define PLT0_ENTRY_WORD0 0x19800000 /* l.movhi r12, 0 <- hi(.got+4) */
+-#define PLT0_ENTRY_WORD1 0xa98c0000 /* l.ori r12, r12, 0 <- lo(.got+4) */
+-#define PLT0_ENTRY_WORD2 0x85ec0004 /* l.lwz r15, 4(r12) <- *(.got+8)*/
+-#define PLT0_ENTRY_WORD3 0x44007800 /* l.jr r15 */
+-#define PLT0_ENTRY_WORD4 0x858c0000 /* l.lwz r12, 0(r12) */
+-
+-#define PLT0_PIC_ENTRY_WORD0 0x85900004 /* l.lwz r12, 4(r16) */
+-#define PLT0_PIC_ENTRY_WORD1 0x85f00008 /* l.lwz r15, 8(r16) */
+-#define PLT0_PIC_ENTRY_WORD2 0x44007800 /* l.jr r15 */
+-#define PLT0_PIC_ENTRY_WORD3 0x15000000 /* l.nop */
+-#define PLT0_PIC_ENTRY_WORD4 0x15000000 /* l.nop */
+-
+-#define PLT_ENTRY_WORD0 0x19800000 /* l.movhi r12, 0 <- hi(got idx addr) */
+-#define PLT_ENTRY_WORD1 0xa98c0000 /* l.ori r12, r12, 0 <- lo(got idx addr) */
+-#define PLT_ENTRY_WORD2 0x858c0000 /* l.lwz r12, 0(r12) */
+-#define PLT_ENTRY_WORD3 0x44006000 /* l.jr r12 */
+-#define PLT_ENTRY_WORD4 0xa9600000 /* l.ori r11, r0, 0 <- reloc offset */
+-
+-#define PLT_PIC_ENTRY_WORD0 0x85900000 /* l.lwz r12, 0(r16) <- index in got */
+-#define PLT_PIC_ENTRY_WORD1 0xa9600000 /* l.ori r11, r0, 0 <- reloc offset */
+-#define PLT_PIC_ENTRY_WORD2 0x44006000 /* l.jr r12 */
+-#define PLT_PIC_ENTRY_WORD3 0x15000000 /* l.nop */
+-#define PLT_PIC_ENTRY_WORD4 0x15000000 /* l.nop */
++#define PLT_ENTRY_SIZE 16
++
++#define OR1K_MOVHI(D)		(0x18000000 | (D << 21))
++#define OR1K_ADRP(D)		(0x08000000 | (D << 21))
++#define OR1K_LWZ(D,A)		(0x84000000 | (D << 21) | (A << 16))
++#define OR1K_ORI0(D)		(0xA8000000 | (D << 21))
++#define OR1K_JR(B)		(0x44000000 | (B << 11))
++#define OR1K_NOP		0x15000000
+ 
+ #define ELF_DYNAMIC_INTERPRETER "/usr/lib/ld.so.1"
+ 
+@@ -274,16 +257,16 @@ static reloc_howto_type or1k_elf_howto_table[] =
+ 	 FALSE),		/* pcrel_offset */
+ 
+   /* A 26 bit PLT relocation.  Shifted by 2.  */
+-  HOWTO (R_OR1K_PLT26,	/* Type.  */
++  HOWTO (R_OR1K_PLT26,		/* Type.  */
+ 	 2,			/* Rightshift.  */
+ 	 2,			/* Size (0 = byte, 1 = short, 2 = long).  */
+ 	 26,			/* Bitsize.  */
+-	 TRUE,			/* PC_relative.  */
++	 TRUE,			/* pc_relative.  */
+ 	 0,			/* Bitpos.  */
+ 	 complain_overflow_signed, /* Complain on overflow.  */
+-	 bfd_elf_generic_reloc,/* Special Function.  */
++	 bfd_elf_generic_reloc, /* Special Function.  */
+ 	 "R_OR1K_PLT26",	/* Name.  */
+-	 FALSE,		/* Partial Inplace.  */
++	 FALSE,			/* Partial Inplace.  */
+ 	 0,			/* Source Mask.  */
+ 	 0x03ffffff,		/* Dest Mask.  */
+ 	 TRUE),			/* PC relative offset?  */
+@@ -651,6 +634,180 @@ static reloc_howto_type or1k_elf_howto_table[] =
+ 	 0x0,			/* src_mask */
+ 	 0xffff,		/* dst_mask */
+ 	 FALSE),		/* pcrel_offset */
++
++  /* A page relative 21 bit relocation, right shifted by 13, aligned.
++     Note that this is *page* relative, not pc relative.  The idea is
++     similar, but normally the section alignment is not such that the
++     assembler can infer a final value, which it attempts to do with
++     pc-relative relocations to local symbols.  */
++  HOWTO (R_OR1K_PCREL_PG21,    /* type */
++	 13,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 21,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_signed, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_PCREL_PG21",   /* name */
++	 FALSE,			/* partial_inplace */
++	 0,			/* src_mask */
++	 0x001fffff,		/* dst_mask */
++	 TRUE),			/* pcrel_offset */
++
++  HOWTO (R_OR1K_GOT_PG21,       /* type */
++	 13,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 21,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_signed, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_GOT_PG21",     /* name */
++	 FALSE,			/* partial_inplace */
++	 0,			/* src_mask */
++	 0x001fffff,		/* dst_mask */
++	 TRUE),			/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_GD_PG21,    /* type */
++	 13,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 21,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_signed, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_GD_PG21",  /* name */
++	 FALSE,			/* partial_inplace */
++	 0,			/* src_mask */
++	 0x001fffff,		/* dst_mask */
++	 TRUE),			/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_LDM_PG21,   /* type */
++	 13,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 21,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_signed, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_LDM_PG21", /* name */
++	 FALSE,			/* partial_inplace */
++	 0,			/* src_mask */
++	 0x001fffff,		/* dst_mask */
++	 TRUE),			/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_IE_PG21,    /* type */
++	 13,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 21,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_signed, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_IE_PG21",  /* name */
++	 FALSE,			/* partial_inplace */
++	 0,			/* src_mask */
++	 0x001fffff,		/* dst_mask */
++	 TRUE),			/* pcrel_offset */
++
++  HOWTO (R_OR1K_LO13,		/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_LO13",		/* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_GOT_LO13,       /* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_GOT_LO13",     /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_GD_LO13,    /* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_GD_LO13",  /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_LDM_LO13,   /* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLD_LDM_LO13", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_IE_LO13,    /* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_IE_LO13",  /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_SLO13,		/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_SLO13",	/* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  /* A 26 bit PLT relocation, using ADRP.  Shifted by 2.  */
++  HOWTO (R_OR1K_PLTA26,		/* Type.  */
++	 2,			/* Rightshift.  */
++	 2,			/* Size (0 = byte, 1 = short, 2 = long).  */
++	 26,			/* Bitsize.  */
++	 TRUE,			/* pc_relative.  */
++	 0,			/* Bitpos.  */
++	 complain_overflow_signed, /* Complain on overflow.  */
++	 bfd_elf_generic_reloc,	/* Special Function.  */
++	 "R_OR1K_PLTA26",	/* Name.  */
++	 FALSE,			/* Partial Inplace.  */
++	 0,			/* Source Mask.  */
++	 0x03ffffff,		/* Dest Mask.  */
++	 TRUE),			/* PC relative offset?  */
+ };
+ 
+ /* Map BFD reloc types to Or1k ELF reloc types.  */
+@@ -702,6 +859,18 @@ static const struct or1k_reloc_map or1k_reloc_map[] =
+   { BFD_RELOC_OR1K_SLO16,	R_OR1K_SLO16 },
+   { BFD_RELOC_OR1K_GOTOFF_SLO16, R_OR1K_GOTOFF_SLO16 },
+   { BFD_RELOC_OR1K_TLS_LE_SLO16, R_OR1K_TLS_LE_SLO16 },
++  { BFD_RELOC_OR1K_PCREL_PG21,	R_OR1K_PCREL_PG21 },
++  { BFD_RELOC_OR1K_GOT_PG21,	R_OR1K_GOT_PG21 },
++  { BFD_RELOC_OR1K_TLS_GD_PG21,	R_OR1K_TLS_GD_PG21 },
++  { BFD_RELOC_OR1K_TLS_LDM_PG21, R_OR1K_TLS_LDM_PG21 },
++  { BFD_RELOC_OR1K_TLS_IE_PG21,	R_OR1K_TLS_IE_PG21 },
++  { BFD_RELOC_OR1K_LO13,	R_OR1K_LO13 },
++  { BFD_RELOC_OR1K_GOT_LO13,	R_OR1K_GOT_LO13 },
++  { BFD_RELOC_OR1K_TLS_GD_LO13,	R_OR1K_TLS_GD_LO13 },
++  { BFD_RELOC_OR1K_TLS_LDM_LO13, R_OR1K_TLS_LDM_LO13 },
++  { BFD_RELOC_OR1K_TLS_IE_LO13,	R_OR1K_TLS_IE_LO13 },
++  { BFD_RELOC_OR1K_SLO13,	R_OR1K_SLO13 },
++  { BFD_RELOC_OR1K_PLTA26,	R_OR1K_PLTA26 },
+ };
+ 
+ #define TLS_UNKNOWN    0
+@@ -745,6 +914,8 @@ struct elf_or1k_link_hash_table
+ 
+   /* Small local sym to section mapping cache.  */
+   struct sym_cache sym_sec;
++
++  bfd_boolean saw_plta;
+ };
+ 
+ /* Get the ELF linker hash table from a link_info structure.  */
+@@ -896,19 +1067,15 @@ or1k_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
+ {
+   bfd_reloc_status_type status = bfd_reloc_ok;
+   int size = bfd_get_reloc_size (howto);
+-  bfd_vma x;
++  bfd_vma x, place;
+ 
+   /* Sanity check the address.  */
+   if (offset + size > bfd_get_section_limit_octets (input_bfd, input_section))
+     return bfd_reloc_outofrange;
+ 
+-  if (howto->pc_relative)
+-    {
+-      value -= (input_section->output_section->vma
+-		+ input_section->output_offset);
+-      if (howto->pcrel_offset)
+-	value -= offset;
+-    }
++  place = (input_section->output_section->vma
++	   + input_section->output_offset
++	   + (howto->pcrel_offset ? offset : 0));
+ 
+   switch (howto->type)
+     {
+@@ -921,10 +1088,33 @@ or1k_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
+       break;
+ 
+     case R_OR1K_INSN_REL_26:
++      value -= place;
+       /* Diagnose mis-aligned branch targets.  */
+       if (value & 3)
+ 	status = bfd_reloc_dangerous;
+       break;
++
++    case R_OR1K_PCREL_PG21:
++    case R_OR1K_GOT_PG21:
++    case R_OR1K_TLS_GD_PG21:
++    case R_OR1K_TLS_LDM_PG21:
++    case R_OR1K_TLS_IE_PG21:
++      value = (value & -8192) - (place & -8192);
++      break;
++
++    case R_OR1K_LO13:
++    case R_OR1K_GOT_LO13:
++    case R_OR1K_TLS_GD_LO13:
++    case R_OR1K_TLS_LDM_LO13:
++    case R_OR1K_TLS_IE_LO13:
++    case R_OR1K_SLO13:
++      value &= 8191;
++      break;
++
++    default:
++      if (howto->pc_relative)
++	value -= place;
++      break;
+     }
+ 
+   status = bfd_check_overflow (howto->complain_on_overflow,
+@@ -949,6 +1139,7 @@ or1k_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
+     case R_OR1K_SLO16:
+     case R_OR1K_GOTOFF_SLO16:
+     case R_OR1K_TLS_LE_SLO16:
++    case R_OR1K_SLO13:
+       /* The split imm16 field used for stores.  */
+       x = (x & ~0x3e007ff) | ((value & 0xf800) << 10) | (value & 0x7ff);
+       break;
+@@ -1039,7 +1230,7 @@ or1k_elf_relocate_section (bfd *output_bfd,
+   asection *sreloc;
+   bfd_vma *local_got_offsets;
+   asection *sgot, *splt;
+-  bfd_vma plt_base, got_base;
++  bfd_vma plt_base, got_base, got_sym_value;
+   bfd_boolean ret_val = TRUE;
+ 
+   if (htab == NULL)
+@@ -1056,9 +1247,15 @@ or1k_elf_relocate_section (bfd *output_bfd,
+     plt_base = splt->output_section->vma + splt->output_offset;
+ 
+   sgot = htab->root.sgot;
+-  got_base = 0;
++  got_sym_value = got_base = 0;
+   if (sgot != NULL)
++    {
++      struct elf_link_hash_entry *hgot = htab->root.hgot;
++      got_sym_value = (hgot->root.u.def.value
++		       + hgot->root.u.def.section->output_section->vma
++		       + hgot->root.u.def.section->output_offset);
+     got_base = sgot->output_section->vma + sgot->output_offset;
++    }
+ 
+   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+   sym_hashes = elf_sym_hashes (input_bfd);
+@@ -1129,13 +1326,12 @@ or1k_elf_relocate_section (bfd *output_bfd,
+       switch (howto->type)
+ 	{
+ 	case R_OR1K_PLT26:
++	case R_OR1K_PLTA26:
+ 	  /* If the call is not local, redirect the branch to the PLT.
+ 	     Otherwise do nothing to send the branch to the symbol direct.  */
+-	  if (!SYMBOL_CALLS_LOCAL (info, h))
+-	    {
+-	      BFD_ASSERT (h->plt.offset != (bfd_vma) -1);
+-	      relocation = plt_base + h->plt.offset;
+-	    }
++	  if (!SYMBOL_CALLS_LOCAL (info, h)
++	      && h->plt.offset != (bfd_vma) -1)
++	    relocation = plt_base + h->plt.offset;
+ 
+ 	  /* Addend should be zero.  */
+ 	  if (rel->r_addend != 0)
+@@ -1149,13 +1345,17 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	  break;
+ 
+ 	case R_OR1K_GOT16:
+-	  /* Relocation is to the entry for this symbol in the global
+-	     offset table.  */
++	case R_OR1K_GOT_PG21:
++	case R_OR1K_GOT_LO13:
++	  {
++	    bfd_vma off;
++
++	    /* Relocation is to the entry for this symbol
++	       in the global offset table.  */
+ 	  BFD_ASSERT (sgot != NULL);
+ 	  if (h != NULL)
+ 	    {
+ 	      bfd_boolean dyn;
+-	      bfd_vma off;
+ 
+ 	      off = h->got.offset;
+ 	      BFD_ASSERT (off != (bfd_vma) -1);
+@@ -1167,14 +1367,13 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 		  || (bfd_link_pic (info)
+ 		      && SYMBOL_REFERENCES_LOCAL (info, h)))
+ 		{
+-		  /* This is actually a static link, or it is a
+-		     -Bsymbolic link and the symbol is defined
+-		     locally, or the symbol was forced to be local
+-		     because of a version file.  We must initialize
+-		     this entry in the global offset table.  Since the
+-		     offset must always be a multiple of 4, we use the
+-		     least significant bit to record whether we have
+-		     initialized it already.
++		    /* This is actually a static link, or it is a -Bsymbolic
++		       link and the symbol is defined locally, or the symbol
++		       was forced to be local because of a version file.
++		       We must initialize this entry in the GOT.  Since the
++		       offset must always be a multiple of 4, we use the least
++		       significant bit to record whether we have initialized
++		       it already.
+ 
+ 		     When doing a dynamic link, we create a .rela.got
+ 		     relocation entry to initialize the value.  This
+@@ -1190,12 +1389,9 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 		      h->got.offset |= 1;
+ 		    }
+ 		}
+-
+-	      relocation = sgot->output_offset + off;
+ 	    }
+ 	  else
+ 	    {
+-	      bfd_vma off;
+ 	      bfd_byte *loc;
+ 
+ 	      BFD_ASSERT (local_got_offsets != NULL
+@@ -1220,23 +1416,28 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 
+ 		      /* We need to generate a R_OR1K_RELATIVE reloc
+ 			 for the dynamic linker.  */
+-		      srelgot = htab->root.srelgot;
++			srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
+ 		      BFD_ASSERT (srelgot != NULL);
+ 
+ 		      outrel.r_offset = got_base + off;
+ 		      outrel.r_info = ELF32_R_INFO (0, R_OR1K_RELATIVE);
+ 		      outrel.r_addend = relocation;
+ 		      loc = srelgot->contents;
+-		      loc += srelgot->reloc_count * sizeof (Elf32_External_Rela);
++			loc += (srelgot->reloc_count
++				* sizeof (Elf32_External_Rela));
+ 		      bfd_elf32_swap_reloca_out (output_bfd, &outrel,loc);
+ 		      ++srelgot->reloc_count;
+ 		    }
+-
+ 		  local_got_offsets[r_symndx] |= 1;
+ 		}
+-	      relocation = sgot->output_offset + off;
+ 	    }
+ 
++	    /* The GOT_PG21 and GOT_LO13 relocs are pc-relative,
++	       while the GOT16 reloc is GOT relative.  */
++	    relocation = got_base + off;
++	    if (r_type == R_OR1K_GOT16)
++	      relocation -= got_sym_value;
++
+ 	  /* Addend should be zero.  */
+ 	  if (rel->r_addend != 0)
+ 	    {
+@@ -1246,6 +1447,7 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	      bfd_set_error (bfd_error_bad_value);
+ 	      ret_val = FALSE;
+ 	    }
++	  }
+ 	  break;
+ 
+ 	case R_OR1K_GOTOFF_LO16:
+@@ -1262,10 +1464,13 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	      ret_val = FALSE;
+ 	      bfd_set_error (bfd_error_bad_value);
+ 	    }
+-	  relocation -= got_base;
++	  relocation -= got_sym_value;
+ 	  break;
+ 
+ 	case R_OR1K_INSN_REL_26:
++	case R_OR1K_PCREL_PG21:
++	case R_OR1K_LO13:
++	case R_OR1K_SLO13:
+ 	  /* For a non-shared link, these will reference either the plt
+ 	     or a .dynbss copy of the symbol.  */
+ 	  if (bfd_link_pic (info) && !SYMBOL_REFERENCES_LOCAL (info, h))
+@@ -1362,6 +1567,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 
+ 	case R_OR1K_TLS_LDM_HI16:
+ 	case R_OR1K_TLS_LDM_LO16:
++	case R_OR1K_TLS_LDM_PG21:
++	case R_OR1K_TLS_LDM_LO13:
+ 	case R_OR1K_TLS_LDO_HI16:
+ 	case R_OR1K_TLS_LDO_LO16:
+ 	  /* TODO: implement support for local dynamic.  */
+@@ -1374,8 +1581,12 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
++	case R_OR1K_TLS_GD_PG21:
++	case R_OR1K_TLS_GD_LO13:
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
++	case R_OR1K_TLS_IE_PG21:
++	case R_OR1K_TLS_IE_LO13:
+ 	case R_OR1K_TLS_IE_AHI16:
+ 	  {
+ 	    bfd_vma gotoff;
+@@ -1417,8 +1628,11 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 		  && (h->root.type == bfd_link_hash_defweak || !h->def_regular));
+ 
+ 	    /* Shared GD.  */
+-	    if (dynamic && (howto->type == R_OR1K_TLS_GD_HI16
+-			    || howto->type == R_OR1K_TLS_GD_LO16))
++	    if (dynamic
++		&& (howto->type == R_OR1K_TLS_GD_HI16
++		    || howto->type == R_OR1K_TLS_GD_LO16
++		    || howto->type == R_OR1K_TLS_GD_PG21
++		    || howto->type == R_OR1K_TLS_GD_LO13))
+ 	      {
+ 		int i;
+ 
+@@ -1449,7 +1663,9 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	      }
+ 	    /* Static GD.  */
+ 	    else if (howto->type == R_OR1K_TLS_GD_HI16
+-		     || howto->type == R_OR1K_TLS_GD_LO16)
++		     || howto->type == R_OR1K_TLS_GD_LO16
++		     || howto->type == R_OR1K_TLS_GD_PG21
++		     || howto->type == R_OR1K_TLS_GD_LO13)
+ 	      {
+ 		bfd_put_32 (output_bfd, 1, sgot->contents + gotoff);
+ 		bfd_put_32 (output_bfd, tpoff (info, relocation),
+@@ -1483,9 +1699,17 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 		bfd_put_32 (output_bfd, tpoff (info, relocation),
+ 			    sgot->contents + gotoff);
+ 	      }
+-	    relocation = sgot->output_offset + gotoff;
+-	    break;
++
++	    /* The PG21 and LO13 relocs are pc-relative, while the
++	       rest are GOT relative.  */
++	    relocation = got_base + gotoff;
++	    if (!(r_type == R_OR1K_TLS_GD_PG21
++		  || r_type == R_OR1K_TLS_GD_LO13
++		  || r_type == R_OR1K_TLS_IE_PG21
++		  || r_type == R_OR1K_TLS_IE_LO13))
++	      relocation -= got_sym_value;
+ 	  }
++	  break;
+ 
+ 	case R_OR1K_TLS_LE_HI16:
+ 	case R_OR1K_TLS_LE_LO16:
+@@ -1640,16 +1864,22 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	{
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
++	case R_OR1K_TLS_GD_PG21:
++	case R_OR1K_TLS_GD_LO13:
+ 	  tls_type = TLS_GD;
+ 	  break;
+ 	case R_OR1K_TLS_LDM_HI16:
+ 	case R_OR1K_TLS_LDM_LO16:
++	case R_OR1K_TLS_LDM_PG21:
++	case R_OR1K_TLS_LDM_LO13:
+ 	case R_OR1K_TLS_LDO_HI16:
+ 	case R_OR1K_TLS_LDO_LO16:
+ 	  tls_type = TLS_LD;
+ 	  break;
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
++	case R_OR1K_TLS_IE_PG21:
++	case R_OR1K_TLS_IE_LO13:
+ 	case R_OR1K_TLS_IE_AHI16:
+ 	  tls_type = TLS_IE;
+ 	  break;
+@@ -1704,6 +1934,9 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	  break;
+ 
+ 	  /* This relocation requires .plt entry.  */
++	case R_OR1K_PLTA26:
++	  htab->saw_plta = TRUE;
++	  /* FALLTHRU */
+ 	case R_OR1K_PLT26:
+ 	  if (h != NULL)
+ 	    {
+@@ -1713,10 +1946,16 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	  break;
+ 
+ 	case R_OR1K_GOT16:
++	case R_OR1K_GOT_PG21:
++	case R_OR1K_GOT_LO13:
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
++	case R_OR1K_TLS_GD_PG21:
++	case R_OR1K_TLS_GD_LO13:
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
++	case R_OR1K_TLS_IE_PG21:
++	case R_OR1K_TLS_IE_LO13:
+ 	case R_OR1K_TLS_IE_AHI16:
+ 	      if (h != NULL)
+ 		h->got.refcount += 1;
+@@ -1760,6 +1999,9 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	case R_OR1K_AHI16:
+ 	case R_OR1K_SLO16:
+ 	case R_OR1K_32:
++	case R_OR1K_PCREL_PG21:
++	case R_OR1K_LO13:
++	case R_OR1K_SLO13:
+ 	  {
+ 	    if (h != NULL && !bfd_link_pic (info))
+ 	      {
+@@ -1903,6 +2145,36 @@ or1k_elf_check_relocs (bfd *abfd,
+   return TRUE;
+ }
+ 
++static void
++or1k_write_plt_entry (bfd *output_bfd, bfd_byte *contents, unsigned insn1,
++		      unsigned insn2, unsigned insn3, unsigned insnj)
++{
++  unsigned nodelay = elf_elfheader (output_bfd)->e_flags & EF_OR1K_NODELAY;
++  unsigned insn4;
++
++  /* Honor the no-delay-slot setting.  */
++  if (insn3 == OR1K_NOP)
++    {
++      insn4 = insn3;
++      if (nodelay)
++	insn3 = insnj;
++      else
++	insn3 = insn2, insn2 = insnj;
++    }
++  else
++    {
++      if (nodelay)
++	insn4 = insnj;
++      else
++	insn4 = insn3, insn3 = insnj;
++    }
++
++  bfd_put_32 (output_bfd, insn1, contents);
++  bfd_put_32 (output_bfd, insn2, contents + 4);
++  bfd_put_32 (output_bfd, insn3, contents + 8);
++  bfd_put_32 (output_bfd, insn4, contents + 12);
++}
++
+ /* Finish up the dynamic sections.  */
+ 
+ static bfd_boolean
+@@ -1967,35 +2239,39 @@ or1k_elf_finish_dynamic_sections (bfd *output_bfd,
+       splt = htab->root.splt;
+       if (splt && splt->size > 0)
+ 	{
+-	  if (bfd_link_pic (info))
++	  unsigned plt0, plt1, plt2;
++	  bfd_vma got_addr = sgot->output_section->vma + sgot->output_offset;
++
++	  /* Note we force 16 byte alignment on the .got, so that
++	     the movhi/adrp can be shared between the two loads.  */
++
++	  if (htab->saw_plta)
+ 	    {
+-	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD0,
+-			  splt->contents);
+-	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD1,
+-			  splt->contents + 4);
+-	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD2,
+-			  splt->contents + 8);
+-	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD3,
+-			  splt->contents + 12);
+-	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD4,
+-			  splt->contents + 16);
++	      bfd_vma pc = splt->output_section->vma + splt->output_offset;
++	      unsigned pa = ((got_addr >> 13) - (pc >> 13)) & 0x1fffff;
++	      unsigned po = got_addr & 0x1fff;
++	      plt0 = OR1K_ADRP(12) | pa;
++	      plt1 = OR1K_LWZ(15,12) | (po + 8);
++	      plt2 = OR1K_LWZ(12,12) | (po + 4);
++	    }
++	  else if (bfd_link_pic (info))
++	    {
++	      plt0 = OR1K_LWZ(15, 16) | 8;	/* .got+8 */
++	      plt1 = OR1K_LWZ(12, 16) | 4;	/* .got+4 */
++	      plt2 = OR1K_NOP;
+ 	    }
+ 	  else
+ 	    {
+-	      unsigned long addr;
+-	      /* addr = .got + 4 */
+-	      addr = sgot->output_section->vma + sgot->output_offset + 4;
+-	      bfd_put_32 (output_bfd,
+-			  PLT0_ENTRY_WORD0 | ((addr >> 16) & 0xffff),
+-			  splt->contents);
+-	      bfd_put_32 (output_bfd,
+-			  PLT0_ENTRY_WORD1 | (addr & 0xffff),
+-			  splt->contents + 4);
+-	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD2, splt->contents + 8);
+-	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD3, splt->contents + 12);
+-	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD4, splt->contents + 16);
++	      unsigned ha = ((got_addr + 0x8000) >> 16) & 0xffff;
++	      unsigned lo = got_addr & 0xffff;
++	      plt0 = OR1K_MOVHI(12) | ha;
++	      plt1 = OR1K_LWZ(15,12) | (lo + 8);
++	      plt2 = OR1K_LWZ(12,12) | (lo + 4);
+ 	    }
+ 
++	  or1k_write_plt_entry (output_bfd, splt->contents,
++				plt0, plt1, plt2, OR1K_JR(15));
++
+ 	  elf_section_data (splt->output_section)->this_hdr.sh_entsize = 4;
+ 	}
+     }
+@@ -2037,11 +2313,15 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
+ 
+   if (h->plt.offset != (bfd_vma) -1)
+     {
++      unsigned int plt0, plt1, plt2;
+       asection *splt;
+       asection *sgot;
+       asection *srela;
+-
++      bfd_vma plt_base_addr;
++      bfd_vma plt_addr;
+       bfd_vma plt_index;
++      bfd_vma plt_reloc;
++      bfd_vma got_base_addr;
+       bfd_vma got_offset;
+       bfd_vma got_addr;
+       Elf_Internal_Rela rela;
+@@ -2055,60 +2335,55 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
+       srela = htab->root.srelplt;
+       BFD_ASSERT (splt != NULL && sgot != NULL && srela != NULL);
+ 
++      plt_base_addr = splt->output_section->vma + splt->output_offset;
++      got_base_addr = sgot->output_section->vma + sgot->output_offset;
++
+       /* Get the index in the procedure linkage table which
+ 	 corresponds to this symbol.  This is the index of this symbol
+ 	 in all the symbols for which we are making plt entries.  The
+ 	 first entry in the procedure linkage table is reserved.  */
+       plt_index = h->plt.offset / PLT_ENTRY_SIZE - 1;
++      plt_addr = plt_base_addr + h->plt.offset;
++      plt_reloc = plt_index * sizeof (Elf32_External_Rela);
+ 
+       /* Get the offset into the .got table of the entry that
+ 	corresponds to this function.  Each .got entry is 4 bytes.
+ 	The first three are reserved.  */
+       got_offset = (plt_index + 3) * 4;
+-      got_addr = got_offset;
++      got_addr = got_base_addr + got_offset;
+ 
+       /* Fill in the entry in the procedure linkage table.  */
+-      if (! bfd_link_pic (info))
++      if (htab->saw_plta)
+ 	{
+-	  got_addr += htab->root.sgotplt->output_section->vma
+-	    + htab->root.sgotplt->output_offset;
+-	  bfd_put_32 (output_bfd, PLT_ENTRY_WORD0 | ((got_addr >> 16) & 0xffff),
+-		      splt->contents + h->plt.offset);
+-	  bfd_put_32 (output_bfd, PLT_ENTRY_WORD1 | (got_addr & 0xffff),
+-		      splt->contents + h->plt.offset + 4);
+-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_ENTRY_WORD2,
+-		      splt->contents + h->plt.offset + 8);
+-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_ENTRY_WORD3,
+-		      splt->contents + h->plt.offset + 12);
+-	  bfd_put_32 (output_bfd, PLT_ENTRY_WORD4
+-		      | plt_index * sizeof (Elf32_External_Rela),
+-		      splt->contents + h->plt.offset + 16);
++	  unsigned pa = ((got_addr >> 13) - (plt_addr >> 13)) & 0x1fffff;
++	  unsigned po = (got_addr & 0x1fff);
++	  plt0 = OR1K_ADRP(12) | pa;
++	  plt1 = OR1K_LWZ(12,12) | po;
++	  plt2 = OR1K_ORI0(11) | plt_reloc;
++	}
++      else if (bfd_link_pic (info))
++	{
++	  plt0 = OR1K_LWZ(12,16) | got_offset;
++	  plt1 = OR1K_ORI0(11) | plt_reloc;
++	  plt2 = OR1K_NOP;
+ 	}
+       else
+ 	{
+-	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD0 | (got_addr & 0xffff),
+-		      splt->contents + h->plt.offset);
+-	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD1
+-		      | plt_index * sizeof (Elf32_External_Rela),
+-		      splt->contents + h->plt.offset + 4);
+-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD2,
+-		      splt->contents + h->plt.offset + 8);
+-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD3,
+-		      splt->contents + h->plt.offset + 12);
+-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD4,
+-		      splt->contents + h->plt.offset + 16);
++	  unsigned ha = ((got_addr + 0x8000) >> 16) & 0xffff;
++	  unsigned lo = got_addr & 0xffff;
++	  plt0 = OR1K_MOVHI(12) | ha;
++	  plt1 = OR1K_LWZ(12,12) | lo;
++	  plt2 = OR1K_ORI0(11) | plt_reloc;
+ 	}
+ 
++      or1k_write_plt_entry (output_bfd, splt->contents + h->plt.offset,
++			    plt0, plt1, plt2, OR1K_JR(12));
++
+       /* Fill in the entry in the global offset table.  */
+-      bfd_put_32 (output_bfd,
+-		  (splt->output_section->vma
+-		   + splt->output_offset), /* Same offset.  */
+-		  sgot->contents + got_offset);
++      bfd_put_32 (output_bfd, plt_addr, sgot->contents + got_offset);
+ 
+       /* Fill in the entry in the .rela.plt section.  */
+-      rela.r_offset = (sgot->output_section->vma
+-		       + sgot->output_offset
+-		       + got_offset);
++      rela.r_offset = got_addr;
+       rela.r_info = ELF32_R_INFO (h->dynindx, R_OR1K_JMP_SLOT);
+       rela.r_addend = 0;
+       loc = srela->contents;
+@@ -2121,7 +2396,6 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
+ 	     the .plt section.  Leave the value alone.  */
+ 	  sym->st_shndx = SHN_UNDEF;
+ 	}
+-
+     }
+ 
+   if (h->got.offset != (bfd_vma) -1
+diff --git a/bfd/libbfd.h b/bfd/libbfd.h
+index 6cb0caef7e..a8851c8026 100644
+--- a/bfd/libbfd.h
++++ b/bfd/libbfd.h
+@@ -2665,10 +2665,16 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
+   "BFD_RELOC_CRIS_32_IE",
+   "BFD_RELOC_OR1K_REL_26",
+   "BFD_RELOC_OR1K_SLO16",
++  "BFD_RELOC_OR1K_PCREL_PG21",
++  "BFD_RELOC_OR1K_LO13",
++  "BFD_RELOC_OR1K_SLO13",
+   "BFD_RELOC_OR1K_GOTPC_HI16",
+   "BFD_RELOC_OR1K_GOTPC_LO16",
+   "BFD_RELOC_OR1K_GOT16",
++  "BFD_RELOC_OR1K_GOT_PG21",
++  "BFD_RELOC_OR1K_GOT_LO13",
+   "BFD_RELOC_OR1K_PLT26",
++  "BFD_RELOC_OR1K_PLTA26",
+   "BFD_RELOC_OR1K_GOTOFF_SLO16",
+   "BFD_RELOC_OR1K_COPY",
+   "BFD_RELOC_OR1K_GLOB_DAT",
+@@ -2676,13 +2682,19 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
+   "BFD_RELOC_OR1K_RELATIVE",
+   "BFD_RELOC_OR1K_TLS_GD_HI16",
+   "BFD_RELOC_OR1K_TLS_GD_LO16",
++  "BFD_RELOC_OR1K_TLS_GD_PG21",
++  "BFD_RELOC_OR1K_TLS_GD_LO13",
+   "BFD_RELOC_OR1K_TLS_LDM_HI16",
+   "BFD_RELOC_OR1K_TLS_LDM_LO16",
++  "BFD_RELOC_OR1K_TLS_LDM_PG21",
++  "BFD_RELOC_OR1K_TLS_LDM_LO13",
+   "BFD_RELOC_OR1K_TLS_LDO_HI16",
+   "BFD_RELOC_OR1K_TLS_LDO_LO16",
+   "BFD_RELOC_OR1K_TLS_IE_HI16",
+   "BFD_RELOC_OR1K_TLS_IE_AHI16",
+   "BFD_RELOC_OR1K_TLS_IE_LO16",
++  "BFD_RELOC_OR1K_TLS_IE_PG21",
++  "BFD_RELOC_OR1K_TLS_IE_LO13",
+   "BFD_RELOC_OR1K_TLS_LE_HI16",
+   "BFD_RELOC_OR1K_TLS_LE_AHI16",
+   "BFD_RELOC_OR1K_TLS_LE_LO16",
+diff --git a/bfd/reloc.c b/bfd/reloc.c
+index 353a240477..8dbb8896d3 100644
+--- a/bfd/reloc.c
++++ b/bfd/reloc.c
+@@ -6147,14 +6147,26 @@ ENUM
+   BFD_RELOC_OR1K_REL_26
+ ENUMX
+   BFD_RELOC_OR1K_SLO16
++ENUMX
++  BFD_RELOC_OR1K_PCREL_PG21
++ENUMX
++  BFD_RELOC_OR1K_LO13
++ENUMX
++  BFD_RELOC_OR1K_SLO13
+ ENUMX
+   BFD_RELOC_OR1K_GOTPC_HI16
+ ENUMX
+   BFD_RELOC_OR1K_GOTPC_LO16
+ ENUMX
+   BFD_RELOC_OR1K_GOT16
++ENUMX
++  BFD_RELOC_OR1K_GOT_PG21
++ENUMX
++  BFD_RELOC_OR1K_GOT_LO13
+ ENUMX
+   BFD_RELOC_OR1K_PLT26
++ENUMX
++  BFD_RELOC_OR1K_PLTA26
+ ENUMX
+   BFD_RELOC_OR1K_GOTOFF_SLO16
+ ENUMX
+@@ -6169,10 +6181,18 @@ ENUMX
+   BFD_RELOC_OR1K_TLS_GD_HI16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_GD_LO16
++ENUMX
++  BFD_RELOC_OR1K_TLS_GD_PG21
++ENUMX
++  BFD_RELOC_OR1K_TLS_GD_LO13
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LDM_HI16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LDM_LO16
++ENUMX
++  BFD_RELOC_OR1K_TLS_LDM_PG21
++ENUMX
++  BFD_RELOC_OR1K_TLS_LDM_LO13
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LDO_HI16
+ ENUMX
+@@ -6183,6 +6203,10 @@ ENUMX
+   BFD_RELOC_OR1K_TLS_IE_AHI16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_IE_LO16
++ENUMX
++  BFD_RELOC_OR1K_TLS_IE_PG21
++ENUMX
++  BFD_RELOC_OR1K_TLS_IE_LO13
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LE_HI16
+ ENUMX
+diff --git a/cpu/or1k.opc b/cpu/or1k.opc
+index 1d55fbc284..5082a30cee 100644
+--- a/cpu/or1k.opc
++++ b/cpu/or1k.opc
+@@ -57,156 +57,251 @@ static const char *
+ parse_disp26 (CGEN_CPU_DESC cd,
+ 	      const char ** strp,
+ 	      int opindex,
+-	      int opinfo,
++	      int opinfo ATTRIBUTE_UNUSED,
+ 	      enum cgen_parse_operand_result * resultp,
+ 	      bfd_vma * valuep)
+ {
++  const char *str = *strp;
+   const char *errmsg = NULL;
+-  enum cgen_parse_operand_result result_type;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_OR1K_REL_26;
+ 
+-  if (strncasecmp (*strp, "plt(", 4) == 0)
++  if (strncasecmp (str, "plta(", 5) == 0)
+     {
+-      bfd_vma value;
++      *strp = str + 5;
++      reloc = BFD_RELOC_OR1K_PLTA26;
++    }
++  else if (strncasecmp (str, "plt(", 4) == 0)
++    {
++      *strp = str + 4;
++      reloc = BFD_RELOC_OR1K_PLT26;
++    }
+ 
+-      *strp += 4;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_PLT26,
+-				   & result_type, & value);
++  errmsg = cgen_parse_address (cd, strp, opindex, reloc, resultp, valuep);
++
++  if (reloc != BFD_RELOC_OR1K_REL_26)
++    {
+       if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 2) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	errmsg = MISSING_CLOSING_PARENTHESIS;
++      else
++	++*strp;
+     }
+-  return cgen_parse_address (cd, strp, opindex, opinfo, resultp, valuep);
++
++  return errmsg;
+ }
+ 
+-enum
++static const char *
++parse_disp21 (CGEN_CPU_DESC cd,
++	      const char ** strp,
++	      int opindex,
++	      int opinfo ATTRIBUTE_UNUSED,
++	      enum cgen_parse_operand_result * resultp,
++	      bfd_vma * valuep)
++{
++  const char *str = *strp;
++  const char *errmsg = NULL;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_OR1K_PCREL_PG21;
++
++  if (strncasecmp (str, "got(", 4) == 0)
++    {
++      *strp = str + 4;
++      reloc = BFD_RELOC_OR1K_GOT_PG21;
++    }
++  else if (strncasecmp (str, "tlsgd(", 6) == 0)
++    {
++      *strp = str + 6;
++      reloc = BFD_RELOC_OR1K_TLS_GD_PG21;
++    }
++  else if (strncasecmp (str, "tlsldm(", 7) == 0)
++    {
++      *strp = str + 7;
++      reloc = BFD_RELOC_OR1K_TLS_LDM_PG21;
++    }
++  else if (strncasecmp (str, "gottp(", 6) == 0)
++    {
++      *strp = str + 6;
++      reloc = BFD_RELOC_OR1K_TLS_IE_PG21;
++    }
++
++  errmsg = cgen_parse_address (cd, strp, opindex, reloc, resultp, valuep);
++
++  if (reloc != BFD_RELOC_OR1K_PCREL_PG21)
++    {
++      if (**strp != ')')
++	errmsg = MISSING_CLOSING_PARENTHESIS;
++      else
++	++*strp;
++    }
++
++  return errmsg;
++}
++
++enum or1k_rclass
++{
++  RCLASS_DIRECT   = 0,
++  RCLASS_GOT      = 1,
++  RCLASS_GOTPC    = 2,
++  RCLASS_GOTOFF   = 3,
++  RCLASS_TLSGD    = 4,
++  RCLASS_TLSLDM   = 5,
++  RCLASS_DTPOFF   = 6,
++  RCLASS_GOTTPOFF = 7,
++  RCLASS_TPOFF    = 8,
++};
++
++enum or1k_rtype
+ {
+   RTYPE_LO = 0,
+-  RTYPE_HI = 1,
+-  RTYPE_AHI = 2,
+-  RTYPE_SLO = 3,
+-
+-  RTYPE_GOT      = (1 << 2),
+-  RTYPE_GOTPC    = (2 << 2),
+-  RTYPE_GOTOFF   = (3 << 2),
+-  RTYPE_TLSGD    = (4 << 2),
+-  RTYPE_TLSLDM   = (5 << 2),
+-  RTYPE_DTPOFF   = (6 << 2),
+-  RTYPE_GOTTPOFF = (7 << 2),
+-  RTYPE_TPOFF    = (8 << 2),
++  RTYPE_SLO = 1,
++  RTYPE_PO = 2,
++  RTYPE_SPO = 3,
++  RTYPE_HI = 4,
++  RTYPE_AHI = 5,
+ };
+ 
+-static const bfd_reloc_code_real_type or1k_imm16_relocs[][4] = {
++#define RCLASS_SHIFT 3
++#define RTYPE_MASK   7
++
++static const bfd_reloc_code_real_type or1k_imm16_relocs[][6] = {
+   { BFD_RELOC_LO16,
++    BFD_RELOC_OR1K_SLO16,
++    BFD_RELOC_OR1K_LO13,
++    BFD_RELOC_OR1K_SLO13,
+     BFD_RELOC_HI16,
+-    BFD_RELOC_HI16_S,
+-    BFD_RELOC_OR1K_SLO16 },
++    BFD_RELOC_HI16_S, },
+   { BFD_RELOC_OR1K_GOT16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_GOT_LO13,
+     BFD_RELOC_UNUSED,
+     BFD_RELOC_UNUSED,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_GOTPC_LO16,
+-    BFD_RELOC_OR1K_GOTPC_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_GOTPC_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_LO16_GOTOFF,
++    BFD_RELOC_OR1K_GOTOFF_SLO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_HI16_GOTOFF,
+-    BFD_RELOC_HI16_S_GOTOFF,
+-    BFD_RELOC_OR1K_GOTOFF_SLO16 },
++    BFD_RELOC_HI16_S_GOTOFF },
+   { BFD_RELOC_OR1K_TLS_GD_LO16,
+-    BFD_RELOC_OR1K_TLS_GD_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_GD_LO13,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_GD_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_LDM_LO16,
+-    BFD_RELOC_OR1K_TLS_LDM_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDM_LO13,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDM_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_LDO_LO16,
+-    BFD_RELOC_OR1K_TLS_LDO_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDO_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_IE_LO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_IE_LO13,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_OR1K_TLS_IE_HI16,
+-    BFD_RELOC_OR1K_TLS_IE_AHI16,
+-    BFD_RELOC_UNUSED },
++    BFD_RELOC_OR1K_TLS_IE_AHI16 },
+   { BFD_RELOC_OR1K_TLS_LE_LO16,
++    BFD_RELOC_OR1K_TLS_LE_SLO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_OR1K_TLS_LE_HI16,
+-    BFD_RELOC_OR1K_TLS_LE_AHI16,
+-    BFD_RELOC_OR1K_TLS_LE_SLO16 }
++    BFD_RELOC_OR1K_TLS_LE_AHI16 },
+ };
+ 
+ static int
+ parse_reloc (const char **strp)
+ {
+     const char *str = *strp;
+-    int ret = 0;
++    enum or1k_rclass cls = RCLASS_DIRECT;
++    enum or1k_rtype typ;
+ 
+     if (strncasecmp (str, "got(", 4) == 0)
+       {
+ 	*strp = str + 4;
+-	return RTYPE_GOT | RTYPE_LO;
++	return (RCLASS_GOT << RCLASS_SHIFT) | RTYPE_LO;
++      }
++    if (strncasecmp (str, "gotpo(", 6) == 0)
++      {
++	*strp = str + 6;
++	return (RCLASS_GOT << RCLASS_SHIFT) | RTYPE_PO;
++      }
++    if (strncasecmp (str, "gottppo(", 8) == 0)
++      {
++	*strp = str + 8;
++	return (RCLASS_GOTTPOFF << RCLASS_SHIFT) | RTYPE_PO;
+       }
+ 
+     if (strncasecmp (str, "gotpc", 5) == 0)
+       {
+ 	str += 5;
+-	ret = RTYPE_GOTPC;
++	cls = RCLASS_GOTPC;
+       }
+     else if (strncasecmp (str, "gotoff", 6) == 0)
+       {
+ 	str += 6;
+-	ret = RTYPE_GOTOFF;
++	cls = RCLASS_GOTOFF;
+       }
+     else if (strncasecmp (str, "tlsgd", 5) == 0)
+       {
+ 	str += 5;
+-	ret = RTYPE_TLSGD;
++	cls = RCLASS_TLSGD;
+       }
+     else if (strncasecmp (str, "tlsldm", 6) == 0)
+       {
+ 	str += 6;
+-	ret = RTYPE_TLSLDM;
++	cls = RCLASS_TLSLDM;
+       }
+     else if (strncasecmp (str, "dtpoff", 6) == 0)
+       {
+ 	str += 6;
+-	ret = RTYPE_DTPOFF;
++	cls = RCLASS_DTPOFF;
+       }
+     else if (strncasecmp (str, "gottpoff", 8) == 0)
+       {
+ 	str += 8;
+-	ret = RTYPE_GOTTPOFF;
++	cls = RCLASS_GOTTPOFF;
+       }
+     else if (strncasecmp (str, "tpoff", 5) == 0)
+       {
+ 	str += 5;
+-	ret = RTYPE_TPOFF;
++	cls = RCLASS_TPOFF;
+       }
+ 
+     if (strncasecmp (str, "hi(", 3) == 0)
+       {
+ 	str += 3;
+-	ret |= RTYPE_HI;
++	typ = RTYPE_HI;
+       }
+     else if (strncasecmp (str, "lo(", 3) == 0)
+       {
+ 	str += 3;
+-	ret |= RTYPE_LO;
++	typ = RTYPE_LO;
+       }
+     else if (strncasecmp (str, "ha(", 3) == 0)
+       {
+ 	str += 3;
+-	ret |= RTYPE_AHI;
++	typ = RTYPE_AHI;
++      }
++    else if (strncasecmp (str, "po(", 3) == 0 && cls != RCLASS_GOTTPOFF)
++      {
++	str += 3;
++	typ = RTYPE_PO;
+       }
+     else
+       return -1;
+ 
+     *strp = str;
+-    return ret;
++    return (cls << RCLASS_SHIFT) | typ;
+ }
+ 
+ static const char *
+@@ -216,23 +311,28 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+   const char *errmsg;
+   enum cgen_parse_operand_result result_type;
+   bfd_reloc_code_real_type reloc = BFD_RELOC_UNUSED;
+-  int reloc_type;
++  enum or1k_rtype reloc_type;
++  int reloc_code;
+   bfd_vma ret;
+ 
+   if (**strp == '#')
+     ++*strp;
+ 
+-  reloc_type = parse_reloc (strp);
+-  if (reloc_type >= 0)
++  reloc_code = parse_reloc (strp);
++  reloc_type = reloc_code & RTYPE_MASK;
++  if (reloc_code >= 0)
+     {
++      enum or1k_rclass reloc_class = reloc_code >> RCLASS_SHIFT;
+       if (splitp)
+ 	{
+-	  if ((reloc_type & 3) == RTYPE_LO && reloc_type != RTYPE_GOT)
+-	    reloc_type |= RTYPE_SLO;
++	  if ((reloc_type == RTYPE_LO || reloc_type == RTYPE_PO)
++	      && reloc_class != RCLASS_GOT)
++	    /* If split we or up the type to RTYPE_SLO or RTYPE_SPO.  */
++	    reloc_type |= 1;
+ 	  else
+ 	    return INVALID_STORE_RELOC;
+ 	}
+-      reloc = or1k_imm16_relocs[reloc_type >> 2][reloc_type & 3];
++      reloc = or1k_imm16_relocs[reloc_class][reloc_type];
+     }
+ 
+   if (reloc != BFD_RELOC_UNUSED)
+@@ -248,7 +348,7 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+       ret = value;
+ 
+       if (errmsg == NULL && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	switch (reloc_type & 3)
++	switch (reloc_type)
+ 	  {
+ 	  case RTYPE_AHI:
+ 	    ret += 0x8000;
+@@ -261,6 +361,10 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+ 	    ret &= 0xffff;
+ 	    ret = (ret ^ 0x8000) - 0x8000;
+ 	    break;
++	  case RTYPE_PO:
++	  case RTYPE_SPO:
++	    ret &= 0x1fff;
++	    break;
+ 	  default:
+ 	    errmsg = INVALID_RELOC_TYPE;
+ 	  }
+diff --git a/cpu/or1korbis.cpu b/cpu/or1korbis.cpu
+index 535bd28bff..6fbf40ad99 100644
+--- a/cpu/or1korbis.cpu
++++ b/cpu/or1korbis.cpu
+@@ -74,10 +74,25 @@
+     25
+     26
+     INT
+-    ((value pc) (sra SI (sub IAI value pc) (const 2)))
++    ((value pc) (sra IAI (sub IAI value pc) (const 2)))
+     ((value pc) (add IAI (sll IAI value (const 2)) pc))
+     )
+ 
++; PC relative, 21-bit, 13 shifted to right, aligned.
++; Note that the alignment means that we can't simplify relocations in the
++; same way as we do for pc-relative, so we use ABS-ADDR instead of PCREL-ADDR.
++(df f-disp21
++    "disp21"
++    ((MACH ORBIS-MACHS) ABS-ADDR)
++    20
++    21
++    INT
++    ((value pc)
++     (sub IAI (sra IAI value (const 13)) (sra IAI pc (const 13))))
++    ((value pc)
++     (sll IAI (add IAI value (sra IAI pc (const 13))) (const 13)))
++    )
++
+ ; Immediates.
+ (dnf f-uimm16    "uimm16"                      ((MACH ORBIS-MACHS))          15 16)
+ (df  f-simm16    "simm16"                      ((MACH ORBIS-MACHS) SIGN-OPT) 15 16 INT #f #f)
+@@ -134,6 +149,7 @@
+   insn-opcode "insn main opcode enums" ((MACH ORBIS-MACHS)) OPC_ f-opcode
+   (("J"            #x00)
+    ("JAL"          #x01)
++   ("ADRP"	   #x02)
+    ("BNF"          #x03)
+    ("BF"           #x04)
+    ("NOP"          #x05)
+@@ -311,6 +327,15 @@
+   (handlers (parse "disp26"))
+   )
+ 
++(define-operand
++  (name disp21)
++  (comment "pc-rel 21 bit")
++  (attrs (MACH ORBIS-MACHS))
++  (type h-iaddr)
++  (index f-disp21)
++  (handlers (parse "disp21"))
++  )
++
+ (define-operand
+   (name simm16)
+   (comment "16-bit signed immediate")
+@@ -403,6 +428,14 @@
+            )
+   )
+ 
++(dni l-adrp "adrp reg/disp21"
++    ((MACH ORBIS-MACHS))
++    "l.adrp $rD,${disp21}"
++    (+ OPC_ADRP rD disp21)
++    (set UWI rD disp21)
++    ()
++  )
++
+ (define-cti
+   l-jal
+   "jump and link (pc-relative iaddr)"
+diff --git a/gas/config/tc-or1k.c b/gas/config/tc-or1k.c
+index 8862c35480..c7dd457c36 100644
+--- a/gas/config/tc-or1k.c
++++ b/gas/config/tc-or1k.c
+@@ -362,12 +362,18 @@ or1k_apply_fix (struct fix *f, valueT *t, segT s)
+     {
+     case BFD_RELOC_OR1K_TLS_GD_HI16:
+     case BFD_RELOC_OR1K_TLS_GD_LO16:
++    case BFD_RELOC_OR1K_TLS_GD_PG21:
++    case BFD_RELOC_OR1K_TLS_GD_LO13:
+     case BFD_RELOC_OR1K_TLS_LDM_HI16:
+     case BFD_RELOC_OR1K_TLS_LDM_LO16:
++    case BFD_RELOC_OR1K_TLS_LDM_PG21:
++    case BFD_RELOC_OR1K_TLS_LDM_LO13:
+     case BFD_RELOC_OR1K_TLS_LDO_HI16:
+     case BFD_RELOC_OR1K_TLS_LDO_LO16:
+     case BFD_RELOC_OR1K_TLS_IE_HI16:
+     case BFD_RELOC_OR1K_TLS_IE_LO16:
++    case BFD_RELOC_OR1K_TLS_IE_PG21:
++    case BFD_RELOC_OR1K_TLS_IE_LO13:
+     case BFD_RELOC_OR1K_TLS_LE_HI16:
+     case BFD_RELOC_OR1K_TLS_LE_LO16:
+       S_SET_THREAD_LOCAL (f->fx_addsy);
+diff --git a/gas/testsuite/gas/or1k/allinsn.d b/gas/testsuite/gas/or1k/allinsn.d
+index 1b36cce1bc..a4ffe43f0b 100644
+--- a/gas/testsuite/gas/or1k/allinsn.d
++++ b/gas/testsuite/gas/or1k/allinsn.d
+@@ -690,3 +690,9 @@ Disassembly of section \.text:
+  834:	4c 02 ff ff 	l\.maci r2,-1
+  838:	4c 02 7f ff 	l\.maci r2,32767
+  83c:	4c 02 80 00 	l\.maci r2,-32768
++
++00000840 <l_adrp>:
++ 840:	08 60 00 00 	l\.adrp r3,0 <localtext>
++			840: R_OR1K_PCREL_PG21	globaldata
++ 844:	08 60 00 00 	l\.adrp r3,0 <localtext>
++			844: R_OR1K_PCREL_PG21	\.data
+diff --git a/gas/testsuite/gas/or1k/allinsn.s b/gas/testsuite/gas/or1k/allinsn.s
+index 321aea3036..55d703734e 100644
+--- a/gas/testsuite/gas/or1k/allinsn.s
++++ b/gas/testsuite/gas/or1k/allinsn.s
+@@ -677,3 +677,6 @@ l_maci:
+ 	l.maci r2,-1
+ 	l.maci r2,32767
+ 	l.maci r2,-32768
++l_adrp:
++	l.adrp r3,globaldata
++	l.adrp r3,localdata
+diff --git a/gas/testsuite/gas/or1k/reloc-1.d b/gas/testsuite/gas/or1k/reloc-1.d
+index f90a1ae269..d1bcf5608b 100644
+--- a/gas/testsuite/gas/or1k/reloc-1.d
++++ b/gas/testsuite/gas/or1k/reloc-1.d
+@@ -52,5 +52,21 @@ OFFSET   TYPE              VALUE
+ 000000ac R_OR1K_TLS_LE_AHI16  x
+ 000000b0 R_OR1K_TLS_LE_LO16  x
+ 000000b4 R_OR1K_TLS_LE_SLO16  x
++000000b8 R_OR1K_PLTA26     x
++000000bc R_OR1K_PLTA26     x
++000000c0 R_OR1K_PLTA26     x
++000000c4 R_OR1K_PLTA26     x
++000000c8 R_OR1K_GOT_PG21   x
++000000cc R_OR1K_TLS_GD_PG21  x
++000000d0 R_OR1K_TLS_LDM_PG21  x
++000000d4 R_OR1K_TLS_IE_PG21  x
++000000d8 R_OR1K_LO13       x
++000000dc R_OR1K_GOT_LO13   x
++000000e0 R_OR1K_TLS_GD_LO13  x
++000000e4 R_OR1K_TLD_LDM_LO13  x
++000000e8 R_OR1K_TLS_IE_LO13  x
++000000ec R_OR1K_LO13       x
++000000f0 R_OR1K_GOT_LO13   x
++000000f4 R_OR1K_SLO13      x
+ 
+ 
+diff --git a/gas/testsuite/gas/or1k/reloc-1.s b/gas/testsuite/gas/or1k/reloc-1.s
+index 4966dc56be..e76abef653 100644
+--- a/gas/testsuite/gas/or1k/reloc-1.s
++++ b/gas/testsuite/gas/or1k/reloc-1.s
+@@ -54,3 +54,23 @@
+ 	l.movhi	r3,tpoffha(x)
+ 	l.lwz	r3,tpofflo(x)(r3)
+ 	l.sw	tpofflo(x)(r3),r3
++
++	l.j	plta(x)
++	l.jal	plta(x)
++	l.bf	plta(x)
++	l.bnf	plta(x)
++
++	l.adrp	r3,got(x)
++	l.adrp	r3,tlsgd(x)
++	l.adrp	r3,tlsldm(x)
++	l.adrp	r3,gottp(x)
++
++	l.ori	r4,r3,po(x)
++	l.ori	r4,r3,gotpo(x)
++	l.ori	r4,r3,tlsgdpo(x)
++	l.ori	r4,r3,tlsldmpo(x)
++	l.ori	r4,r3,gottppo(x)
++
++	l.lbz	r5,po(x)(r3)
++	l.lbz	r5,gotpo(x)(r3)
++	l.sb	po(x)(r3),r6
+diff --git a/gas/testsuite/gas/or1k/reloc-2.l b/gas/testsuite/gas/or1k/reloc-2.l
+index 7a32a7dc14..c104fd9d6e 100644
+--- a/gas/testsuite/gas/or1k/reloc-2.l
++++ b/gas/testsuite/gas/or1k/reloc-2.l
+@@ -8,3 +8,4 @@
+ .*:9: Error: relocation invalid for store .*
+ .*:11: Error: relocation invalid for store .*
+ .*:12: Error: relocation invalid for store .*
++.*:13: Error: relocation invalid for store .*
+diff --git a/gas/testsuite/gas/or1k/reloc-2.s b/gas/testsuite/gas/or1k/reloc-2.s
+index 835dd1c84b..4d20aa7ba0 100644
+--- a/gas/testsuite/gas/or1k/reloc-2.s
++++ b/gas/testsuite/gas/or1k/reloc-2.s
+@@ -10,3 +10,4 @@
+ 	l.sw	tpofflo(x)(r4),r3
+ 	l.sw	tpoffhi(x)(r4),r3
+ 	l.sw	tpoffha(x)(r4),r3
++	l.sw	gotpo(x)(r4),r3
+diff --git a/include/elf/or1k.h b/include/elf/or1k.h
+index e3291d31d3..4369e6250d 100644
+--- a/include/elf/or1k.h
++++ b/include/elf/or1k.h
+@@ -65,6 +65,18 @@ START_RELOC_NUMBERS (elf_or1k_reloc_type)
+   RELOC_NUMBER (R_OR1K_SLO16,         39)
+   RELOC_NUMBER (R_OR1K_GOTOFF_SLO16,  40)
+   RELOC_NUMBER (R_OR1K_TLS_LE_SLO16,  41)
++  RELOC_NUMBER (R_OR1K_PCREL_PG21,    42)
++  RELOC_NUMBER (R_OR1K_GOT_PG21,      43)
++  RELOC_NUMBER (R_OR1K_TLS_GD_PG21,   44)
++  RELOC_NUMBER (R_OR1K_TLS_LDM_PG21,  45)
++  RELOC_NUMBER (R_OR1K_TLS_IE_PG21,   46)
++  RELOC_NUMBER (R_OR1K_LO13,          47)
++  RELOC_NUMBER (R_OR1K_GOT_LO13,      48)
++  RELOC_NUMBER (R_OR1K_TLS_GD_LO13,   49)
++  RELOC_NUMBER (R_OR1K_TLS_LDM_LO13,  50)
++  RELOC_NUMBER (R_OR1K_TLS_IE_LO13,   51)
++  RELOC_NUMBER (R_OR1K_SLO13,         52)
++  RELOC_NUMBER (R_OR1K_PLTA26,        53)
+ END_RELOC_NUMBERS (R_OR1K_max)
+ 
+ #define EF_OR1K_NODELAY (1UL << 0)
+diff --git a/ld/testsuite/ld-or1k/or1k.exp b/ld/testsuite/ld-or1k/or1k.exp
+index 8f09a7c40e..540ca29ed4 100644
+--- a/ld/testsuite/ld-or1k/or1k.exp
++++ b/ld/testsuite/ld-or1k/or1k.exp
+@@ -38,6 +38,23 @@ set or1ktests {
+      "offsets1"}
+ }
+ 
++set or1kplttests {
++    {"PLTA -fpic -shared" "-fpic -shared" ""
++     "" {plta1.s}
++     {{objdump -dr plta1.dd}}
++     "libplta1.so"}
++    {"PLT -fpic -shared" "-fpic -shared" ""
++     "" {plt1.s}
++     {{objdump -dr plt1.dd}}
++     "libplt1.so"}
++    {"Helper shared library" "-fpic -shared" ""
++     "" {pltlib.s} {} "libpltlib.so"}
++    {"PLT -fno-pic exec -relax" "-relax tmpdir/libpltlib.so" ""
++     "" {plt1.s}
++     {{objdump -dr plt1.x.dd}}
++     "plt1.x"}
++}
++
+ # Not implemented yet
+ #   {"TLS -fpic -shared" "-shared -melf64alpha" ""
+ #    "" {align.s tlspic1.s tlspic2.s}
+@@ -66,4 +83,9 @@ set or1ktests {
+ #    "" {tlsg.s}
+ #    {{objdump -sj.debug_foobar tlsg.sd}} "tlsg"}
+ 
++# Shared objects not supported on newlib
+ run_ld_link_tests $or1ktests
++if { ![istarget "or1k*-*-elf*"] } {
++    run_ld_link_tests $or1kplttests
++    return
++}
+diff --git a/ld/testsuite/ld-or1k/plt1.dd b/ld/testsuite/ld-or1k/plt1.dd
+new file mode 100644
+index 0000000000..a982530fa9
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/plt1.dd
+@@ -0,0 +1,27 @@
++
++.*\.so:     file format elf32-or1k
++
++
++Disassembly of section \.plt:
++
++[0-9a-f]+ <\.plt>:
++ [0-9a-f]+:	85 f0 00 08 	l\.lwz r15,8\(r16\)
++ [0-9a-f]+:	44 00 78 00 	l\.jr r15
++ [0-9a-f]+:	85 90 00 04 	l\.lwz r12,4\(r16\)
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++ [0-9a-f]+:	85 90 00 0c 	l\.lwz r12,12\(r16\)
++ [0-9a-f]+:	44 00 60 00 	l\.jr r12
++ [0-9a-f]+:	a9 60 00 00 	l\.ori r11,r0,0x0
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++ [0-9a-f]+:	85 90 00 10 	l\.lwz r12,16\(r16\)
++ [0-9a-f]+:	44 00 60 00 	l\.jr r12
++ [0-9a-f]+:	a9 60 00 0c 	l\.ori r11,r0,0xc
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++
++Disassembly of section \.text:
++
++[0-9a-f]+ <_start>:
++ [0-9a-f]+:	03 ff ff f8 	l\.j [0-9a-f]+ <.plt\+0x10>
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++ [0-9a-f]+:	03 ff ff fa 	l\.j [0-9a-f]+ <.plt\+0x20>
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
+diff --git a/ld/testsuite/ld-or1k/plt1.s b/ld/testsuite/ld-or1k/plt1.s
+new file mode 100644
+index 0000000000..a5573bdc2f
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/plt1.s
+@@ -0,0 +1,11 @@
++	.data
++	.p2align 16
++
++	.text
++	.globl	_start
++_start:
++
++	l.j plt(x)
++	 l.nop
++	l.j plt(y)
++	 l.nop
+diff --git a/ld/testsuite/ld-or1k/plt1.x.dd b/ld/testsuite/ld-or1k/plt1.x.dd
+new file mode 100644
+index 0000000000..d2f47a1257
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/plt1.x.dd
+@@ -0,0 +1,27 @@
++
++.*\.x:     file format elf32-or1k
++
++
++Disassembly of section \.plt:
++
++[0-9a-f]+ <\.plt>:
++ +[0-9a-f]+:	19 80 00 00 	l\.movhi r12,0x0
++ +[0-9a-f]+:	85 ec [0-9a-f]+ [0-9a-f]+ 	l\.lwz r15,[0-9]+\(r12\)
++ +[0-9a-f]+:	44 00 78 00 	l\.jr r15
++ +[0-9a-f]+:	85 8c [0-9a-f]+ [0-9a-f]+ 	l\.lwz r12,[0-9]+\(r12\)
++ +[0-9a-f]+:	19 80 00 00 	l\.movhi r12,0x0
++ +[0-9a-f]+:	85 8c [0-9a-f]+ [0-9a-f]+ 	l\.lwz r12,[0-9]+\(r12\)
++ +[0-9a-f]+:	44 00 60 00 	l\.jr r12
++ +[0-9a-f]+:	a9 60 00 00 	l\.ori r11,r0,0x0
++ +[0-9a-f]+:	19 80 00 00 	l\.movhi r12,0x0
++ +[0-9a-f]+:	85 8c [0-9a-f]+ [0-9a-f]+ 	l\.lwz r12,[0-9]+\(r12\)
++ +[0-9a-f]+:	44 00 60 00 	l\.jr r12
++ +[0-9a-f]+:	a9 60 00 0c 	l\.ori r11,r0,0xc
++
++Disassembly of section \.text:
++
++[0-9a-f]+ <_start>:
++ +[0-9a-f]+:	03 ff ff f8 	l\.j [0-9a-f]+ <.plt\+0x10>
++ +[0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++ +[0-9a-f]+:	03 ff ff fa 	l\.j [0-9a-f]+ <.plt\+0x20>
++ +[0-9a-f]+:	15 00 00 00 	l\.nop 0x0
+diff --git a/ld/testsuite/ld-or1k/plta1.dd b/ld/testsuite/ld-or1k/plta1.dd
+new file mode 100644
+index 0000000000..6767c41607
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/plta1.dd
+@@ -0,0 +1,27 @@
++
++.*\.so:     file format elf32-or1k
++
++
++Disassembly of section .plt:
++
++[0-9a-f]+ <.plt>:
++ [0-9a-f]+:	09 80 00 01 	l\.adrp r12,2000 <.*>
++ [0-9a-f]+:	85 ec 02 10 	l\.lwz r15,528\(r12\)
++ [0-9a-f]+:	44 00 78 00 	l\.jr r15
++ [0-9a-f]+:	85 8c 02 0c 	l\.lwz r12,524\(r12\)
++ [0-9a-f]+:	09 80 00 01 	l\.adrp r12,2000 <.*>
++ [0-9a-f]+:	85 8c 02 14 	l\.lwz r12,532\(r12\)
++ [0-9a-f]+:	44 00 60 00 	l\.jr r12
++ [0-9a-f]+:	a9 60 00 00 	l\.ori r11,r0,0x0
++ [0-9a-f]+:	09 80 00 01 	l\.adrp r12,2000 <.*>
++ [0-9a-f]+:	85 8c 02 18 	l\.lwz r12,536\(r12\)
++ [0-9a-f]+:	44 00 60 00 	l\.jr r12
++ [0-9a-f]+:	a9 60 00 0c 	l\.ori r11,r0,0xc
++
++Disassembly of section .text:
++
++[0-9a-f]+ <_start>:
++ [0-9a-f]+:	03 ff ff f8 	l\.j [0-9a-f]+ <.plt\+0x10>
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
++ [0-9a-f]+:	03 ff ff fa 	l\.j [0-9a-f]+ <.plt\+0x20>
++ [0-9a-f]+:	15 00 00 00 	l\.nop 0x0
+diff --git a/ld/testsuite/ld-or1k/plta1.s b/ld/testsuite/ld-or1k/plta1.s
+new file mode 100644
+index 0000000000..82f8175b16
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/plta1.s
+@@ -0,0 +1,11 @@
++	.data
++	.p2align 16
++
++	.text
++	.globl	_start
++_start:
++
++	l.j plta(x)
++	 l.nop
++	l.j plta(y)
++	 l.nop
+diff --git a/ld/testsuite/ld-or1k/pltlib.s b/ld/testsuite/ld-or1k/pltlib.s
+new file mode 100644
+index 0000000000..baf76ca1af
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/pltlib.s
+@@ -0,0 +1,12 @@
++	.section .data
++	.globl x, y
++x:	.long 33
++y:	.long 44
++
++	.section .text
++	.align 4
++	.global	func
++	.type	func, @function
++func:
++	l.jr	r9
++	 l.nop
+diff --git a/opcodes/or1k-asm.c b/opcodes/or1k-asm.c
+index 751fbef398..bd73ab732b 100644
+--- a/opcodes/or1k-asm.c
++++ b/opcodes/or1k-asm.c
+@@ -61,155 +61,251 @@ static const char *
+ parse_disp26 (CGEN_CPU_DESC cd,
+ 	      const char ** strp,
+ 	      int opindex,
+-	      int opinfo,
++	      int opinfo ATTRIBUTE_UNUSED,
+ 	      enum cgen_parse_operand_result * resultp,
+ 	      bfd_vma * valuep)
+ {
++  const char *str = *strp;
+   const char *errmsg = NULL;
+-  enum cgen_parse_operand_result result_type;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_OR1K_REL_26;
+ 
+-  if (strncasecmp (*strp, "plt(", 4) == 0)
++  if (strncasecmp (str, "plta(", 5) == 0)
+     {
+-      bfd_vma value;
++      *strp = str + 5;
++      reloc = BFD_RELOC_OR1K_PLTA26;
++    }
++  else if (strncasecmp (str, "plt(", 4) == 0)
++    {
++      *strp = str + 4;
++      reloc = BFD_RELOC_OR1K_PLT26;
++    }
+ 
+-      *strp += 4;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_PLT26,
+-				   & result_type, & value);
++  errmsg = cgen_parse_address (cd, strp, opindex, reloc, resultp, valuep);
++
++  if (reloc != BFD_RELOC_OR1K_REL_26)
++    {
+       if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 2) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	errmsg = MISSING_CLOSING_PARENTHESIS;
++      else
++	++*strp;
++    }
++
++  return errmsg;
++}
++
++static const char *
++parse_disp21 (CGEN_CPU_DESC cd,
++	      const char ** strp,
++	      int opindex,
++	      int opinfo ATTRIBUTE_UNUSED,
++	      enum cgen_parse_operand_result * resultp,
++	      bfd_vma * valuep)
++{
++  const char *str = *strp;
++  const char *errmsg = NULL;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_OR1K_PCREL_PG21;
++
++  if (strncasecmp (str, "got(", 4) == 0)
++    {
++      *strp = str + 4;
++      reloc = BFD_RELOC_OR1K_GOT_PG21;
++    }
++  else if (strncasecmp (str, "tlsgd(", 6) == 0)
++    {
++      *strp = str + 6;
++      reloc = BFD_RELOC_OR1K_TLS_GD_PG21;
++    }
++  else if (strncasecmp (str, "tlsldm(", 7) == 0)
++    {
++      *strp = str + 7;
++      reloc = BFD_RELOC_OR1K_TLS_LDM_PG21;
++    }
++  else if (strncasecmp (str, "gottp(", 6) == 0)
++    {
++      *strp = str + 6;
++      reloc = BFD_RELOC_OR1K_TLS_IE_PG21;
+     }
+-  return cgen_parse_address (cd, strp, opindex, opinfo, resultp, valuep);
++
++  errmsg = cgen_parse_address (cd, strp, opindex, reloc, resultp, valuep);
++
++  if (reloc != BFD_RELOC_OR1K_PCREL_PG21)
++    {
++      if (**strp != ')')
++	errmsg = MISSING_CLOSING_PARENTHESIS;
++      else
++	++*strp;
++    }
++
++  return errmsg;
+ }
+ 
+-enum {
++enum or1k_rclass
++{
++  RCLASS_DIRECT   = 0,
++  RCLASS_GOT      = 1,
++  RCLASS_GOTPC    = 2,
++  RCLASS_GOTOFF   = 3,
++  RCLASS_TLSGD    = 4,
++  RCLASS_TLSLDM   = 5,
++  RCLASS_DTPOFF   = 6,
++  RCLASS_GOTTPOFF = 7,
++  RCLASS_TPOFF    = 8,
++};
++
++enum or1k_rtype
++{
+   RTYPE_LO = 0,
+-  RTYPE_HI = 1,
+-  RTYPE_AHI = 2,
+-  RTYPE_SLO = 3,
+-
+-  RTYPE_GOT      = (1 << 2),
+-  RTYPE_GOTPC    = (2 << 2),
+-  RTYPE_GOTOFF   = (3 << 2),
+-  RTYPE_TLSGD    = (4 << 2),
+-  RTYPE_TLSLDM   = (5 << 2),
+-  RTYPE_DTPOFF   = (6 << 2),
+-  RTYPE_GOTTPOFF = (7 << 2),
+-  RTYPE_TPOFF    = (8 << 2),
++  RTYPE_SLO = 1,
++  RTYPE_PO = 2,
++  RTYPE_SPO = 3,
++  RTYPE_HI = 4,
++  RTYPE_AHI = 5,
+ };
+ 
+-static const bfd_reloc_code_real_type or1k_imm16_relocs[][4] = {
++#define RCLASS_SHIFT 3
++#define RTYPE_MASK   7
++
++static const bfd_reloc_code_real_type or1k_imm16_relocs[][6] = {
+   { BFD_RELOC_LO16,
++    BFD_RELOC_OR1K_SLO16,
++    BFD_RELOC_OR1K_LO13,
++    BFD_RELOC_OR1K_SLO13,
+     BFD_RELOC_HI16,
+-    BFD_RELOC_HI16_S,
+-    BFD_RELOC_OR1K_SLO16 },
++    BFD_RELOC_HI16_S, },
+   { BFD_RELOC_OR1K_GOT16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_GOT_LO13,
+     BFD_RELOC_UNUSED,
+     BFD_RELOC_UNUSED,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_GOTPC_LO16,
+-    BFD_RELOC_OR1K_GOTPC_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_GOTPC_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_LO16_GOTOFF,
++    BFD_RELOC_OR1K_GOTOFF_SLO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_HI16_GOTOFF,
+-    BFD_RELOC_HI16_S_GOTOFF,
+-    BFD_RELOC_OR1K_GOTOFF_SLO16 },
++    BFD_RELOC_HI16_S_GOTOFF },
+   { BFD_RELOC_OR1K_TLS_GD_LO16,
+-    BFD_RELOC_OR1K_TLS_GD_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_GD_LO13,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_GD_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_LDM_LO16,
+-    BFD_RELOC_OR1K_TLS_LDM_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDM_LO13,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDM_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_LDO_LO16,
+-    BFD_RELOC_OR1K_TLS_LDO_HI16,
+     BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_LDO_HI16,
+     BFD_RELOC_UNUSED },
+   { BFD_RELOC_OR1K_TLS_IE_LO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_OR1K_TLS_IE_LO13,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_OR1K_TLS_IE_HI16,
+-    BFD_RELOC_OR1K_TLS_IE_AHI16,
+-    BFD_RELOC_UNUSED },
++    BFD_RELOC_OR1K_TLS_IE_AHI16 },
+   { BFD_RELOC_OR1K_TLS_LE_LO16,
++    BFD_RELOC_OR1K_TLS_LE_SLO16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
+     BFD_RELOC_OR1K_TLS_LE_HI16,
+-    BFD_RELOC_OR1K_TLS_LE_AHI16,
+-    BFD_RELOC_OR1K_TLS_LE_SLO16 }
++    BFD_RELOC_OR1K_TLS_LE_AHI16 },
+ };
+ 
+ static int
+-parse_reloc(const char **strp)
++parse_reloc (const char **strp)
+ {
+     const char *str = *strp;
+-    int ret = 0;
++    enum or1k_rclass cls = RCLASS_DIRECT;
++    enum or1k_rtype typ;
+ 
+     if (strncasecmp (str, "got(", 4) == 0)
+-	{
++      {
+ 	*strp = str + 4;
+-	return RTYPE_GOT | RTYPE_LO;
+-	}
++	return (RCLASS_GOT << RCLASS_SHIFT) | RTYPE_LO;
++      }
++    if (strncasecmp (str, "gotpo(", 6) == 0)
++      {
++	*strp = str + 6;
++	return (RCLASS_GOT << RCLASS_SHIFT) | RTYPE_PO;
++      }
++    if (strncasecmp (str, "gottppo(", 8) == 0)
++      {
++	*strp = str + 8;
++	return (RCLASS_GOTTPOFF << RCLASS_SHIFT) | RTYPE_PO;
++      }
+ 
+     if (strncasecmp (str, "gotpc", 5) == 0)
+-	{
++      {
+ 	str += 5;
+-	ret = RTYPE_GOTPC;
+-	}
++	cls = RCLASS_GOTPC;
++      }
+     else if (strncasecmp (str, "gotoff", 6) == 0)
+-    {
++      {
+ 	str += 6;
+-	ret = RTYPE_GOTOFF;
+-    }
++	cls = RCLASS_GOTOFF;
++      }
+     else if (strncasecmp (str, "tlsgd", 5) == 0)
+-    {
++      {
+ 	str += 5;
+-	ret = RTYPE_TLSGD;
+-    }
++	cls = RCLASS_TLSGD;
++      }
+     else if (strncasecmp (str, "tlsldm", 6) == 0)
+-    {
++      {
+ 	str += 6;
+-	ret = RTYPE_TLSLDM;
+-    }
++	cls = RCLASS_TLSLDM;
++      }
+     else if (strncasecmp (str, "dtpoff", 6) == 0)
+-    {
++      {
+ 	str += 6;
+-	ret = RTYPE_DTPOFF;
+-    }
++	cls = RCLASS_DTPOFF;
++      }
+     else if (strncasecmp (str, "gottpoff", 8) == 0)
+-    {
++      {
+ 	str += 8;
+-	ret = RTYPE_GOTTPOFF;
+-    }
++	cls = RCLASS_GOTTPOFF;
++      }
+     else if (strncasecmp (str, "tpoff", 5) == 0)
+-    {
++      {
+ 	str += 5;
+-	ret = RTYPE_TPOFF;
+-    }
++	cls = RCLASS_TPOFF;
++      }
+ 
+     if (strncasecmp (str, "hi(", 3) == 0)
+-    {
++      {
+ 	str += 3;
+-	ret |= RTYPE_HI;
+-    }
++	typ = RTYPE_HI;
++      }
+     else if (strncasecmp (str, "lo(", 3) == 0)
+-    {
++      {
+ 	str += 3;
+-	ret |= RTYPE_LO;
+-    }
++	typ = RTYPE_LO;
++      }
+     else if (strncasecmp (str, "ha(", 3) == 0)
+-    {
++      {
+ 	str += 3;
+-	ret |= RTYPE_AHI;
+-    }
++	typ = RTYPE_AHI;
++      }
++    else if (strncasecmp (str, "po(", 3) == 0 && cls != RCLASS_GOTTPOFF)
++      {
++	str += 3;
++	typ = RTYPE_PO;
++      }
+     else
+       return -1;
+ 
+     *strp = str;
+-    return ret;
++    return (cls << RCLASS_SHIFT) | typ;
+ }
+ 
+ static const char *
+@@ -219,23 +315,28 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+   const char *errmsg;
+   enum cgen_parse_operand_result result_type;
+   bfd_reloc_code_real_type reloc = BFD_RELOC_UNUSED;
+-  int reloc_type;
++  enum or1k_rtype reloc_type;
++  int reloc_code;
+   bfd_vma ret;
+ 
+   if (**strp == '#')
+-      ++*strp;
++    ++*strp;
+ 
+-  reloc_type = parse_reloc (strp);
+-  if (reloc_type >= 0)
++  reloc_code = parse_reloc (strp);
++  reloc_type = reloc_code & RTYPE_MASK;
++  if (reloc_code >= 0)
+     {
++      enum or1k_rclass reloc_class = reloc_code >> RCLASS_SHIFT;
+       if (splitp)
+ 	{
+-	  if ((reloc_type & 3) == RTYPE_LO && reloc_type != RTYPE_GOT)
+-	    reloc_type |= RTYPE_SLO;
++	  if ((reloc_type == RTYPE_LO || reloc_type == RTYPE_PO)
++	      && reloc_class != RCLASS_GOT)
++	    /* If split we or up the type to RTYPE_SLO or RTYPE_SPO.  */
++	    reloc_type |= 1;
+ 	  else
+ 	    return INVALID_STORE_RELOC;
+-    }
+-      reloc = or1k_imm16_relocs[reloc_type >> 2][reloc_type & 3];
++	}
++      reloc = or1k_imm16_relocs[reloc_class][reloc_type];
+     }
+ 
+   if (reloc != BFD_RELOC_UNUSED)
+@@ -251,8 +352,8 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+       ret = value;
+ 
+       if (errmsg == NULL && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	switch (reloc_type & 3)
+-    {
++	switch (reloc_type)
++	  {
+ 	  case RTYPE_AHI:
+ 	    ret += 0x8000;
+ 	    /* FALLTHRU */
+@@ -264,6 +365,10 @@ parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
+ 	    ret &= 0xffff;
+ 	    ret = (ret ^ 0x8000) - 0x8000;
+ 	    break;
++	  case RTYPE_PO:
++	  case RTYPE_SPO:
++	    ret &= 0x1fff;
++	    break;
+ 	  default:
+ 	    errmsg = INVALID_RELOC_TYPE;
+ 	  }
+@@ -344,6 +449,13 @@ or1k_cgen_parse_operand (CGEN_CPU_DESC cd,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      {
++        bfd_vma value = 0;
++        errmsg = parse_disp21 (cd, strp, OR1K_OPERAND_DISP21, 0, NULL,  & value);
++        fields->f_disp21 = value;
++      }
++      break;
+     case OR1K_OPERAND_DISP26 :
+       {
+         bfd_vma value = 0;
+diff --git a/opcodes/or1k-desc.c b/opcodes/or1k-desc.c
+index f1c0768e9c..91c2fbd73d 100644
+--- a/opcodes/or1k-desc.c
++++ b/opcodes/or1k-desc.c
+@@ -967,6 +967,7 @@ const CGEN_IFLD or1k_cgen_ifld_table[] =
+   { OR1K_F_IMM16_25_5, "f-imm16-25-5", 0, 32, 25, 5, { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+   { OR1K_F_IMM16_10_11, "f-imm16-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+   { OR1K_F_DISP26, "f-disp26", 0, 32, 25, 26, { 0|A(PCREL_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
++  { OR1K_F_DISP21, "f-disp21", 0, 32, 20, 21, { 0|A(ABS_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+   { OR1K_F_UIMM16, "f-uimm16", 0, 32, 15, 16, { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+   { OR1K_F_SIMM16, "f-simm16", 0, 32, 15, 16, { 0|A(SIGN_OPT), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+   { OR1K_F_UIMM6, "f-uimm6", 0, 32, 5, 6, { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+@@ -1091,6 +1092,10 @@ const CGEN_OPERAND or1k_cgen_operand_table[] =
+   { "disp26", OR1K_OPERAND_DISP26, HW_H_IADDR, 25, 26,
+     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_DISP26] } },
+     { 0|A(PCREL_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
++/* disp21: pc-rel 21 bit */
++  { "disp21", OR1K_OPERAND_DISP21, HW_H_IADDR, 20, 21,
++    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_DISP21] } },
++    { 0|A(ABS_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+ /* simm16: 16-bit signed immediate */
+   { "simm16", OR1K_OPERAND_SIMM16, HW_H_SIMM16, 15, 16,
+     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_SIMM16] } },
+@@ -1156,6 +1161,11 @@ static const CGEN_IBASE or1k_cgen_insn_table[MAX_INSNS] =
+     OR1K_INSN_L_J, "l-j", "l.j", 32,
+     { 0|A(UNCOND_CTI)|A(NOT_IN_DELAY_SLOT)|A(DELAYED_CTI)|A(SKIP_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
+   },
++/* l.adrp $rD,${disp21} */
++  {
++    OR1K_INSN_L_ADRP, "l-adrp", "l.adrp", 32,
++    { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }
++  },
+ /* l.jal ${disp26} */
+   {
+     OR1K_INSN_L_JAL, "l-jal", "l.jal", 32,
+diff --git a/opcodes/or1k-desc.h b/opcodes/or1k-desc.h
+index 894a8bb462..d84f0fa52a 100644
+--- a/opcodes/or1k-desc.h
++++ b/opcodes/or1k-desc.h
+@@ -279,18 +279,18 @@ typedef enum spr_field_masks {
+ 
+ /* Enum declaration for insn main opcode enums.  */
+ typedef enum insn_opcode {
+-  OPC_J = 0, OPC_JAL = 1, OPC_BNF = 3, OPC_BF = 4
+- , OPC_NOP = 5, OPC_MOVHIMACRC = 6, OPC_SYSTRAPSYNCS = 8, OPC_RFE = 9
+- , OPC_VECTOR = 10, OPC_JR = 17, OPC_JALR = 18, OPC_MACI = 19
+- , OPC_LWA = 27, OPC_CUST1 = 28, OPC_CUST2 = 29, OPC_CUST3 = 30
+- , OPC_CUST4 = 31, OPC_LD = 32, OPC_LWZ = 33, OPC_LWS = 34
+- , OPC_LBZ = 35, OPC_LBS = 36, OPC_LHZ = 37, OPC_LHS = 38
+- , OPC_ADDI = 39, OPC_ADDIC = 40, OPC_ANDI = 41, OPC_ORI = 42
+- , OPC_XORI = 43, OPC_MULI = 44, OPC_MFSPR = 45, OPC_SHROTI = 46
+- , OPC_SFI = 47, OPC_MTSPR = 48, OPC_MAC = 49, OPC_FLOAT = 50
+- , OPC_SWA = 51, OPC_SD = 52, OPC_SW = 53, OPC_SB = 54
+- , OPC_SH = 55, OPC_ALU = 56, OPC_SF = 57, OPC_CUST5 = 60
+- , OPC_CUST6 = 61, OPC_CUST7 = 62, OPC_CUST8 = 63
++  OPC_J = 0, OPC_JAL = 1, OPC_ADRP = 2, OPC_BNF = 3
++ , OPC_BF = 4, OPC_NOP = 5, OPC_MOVHIMACRC = 6, OPC_SYSTRAPSYNCS = 8
++ , OPC_RFE = 9, OPC_VECTOR = 10, OPC_JR = 17, OPC_JALR = 18
++ , OPC_MACI = 19, OPC_LWA = 27, OPC_CUST1 = 28, OPC_CUST2 = 29
++ , OPC_CUST3 = 30, OPC_CUST4 = 31, OPC_LD = 32, OPC_LWZ = 33
++ , OPC_LWS = 34, OPC_LBZ = 35, OPC_LBS = 36, OPC_LHZ = 37
++ , OPC_LHS = 38, OPC_ADDI = 39, OPC_ADDIC = 40, OPC_ANDI = 41
++ , OPC_ORI = 42, OPC_XORI = 43, OPC_MULI = 44, OPC_MFSPR = 45
++ , OPC_SHROTI = 46, OPC_SFI = 47, OPC_MTSPR = 48, OPC_MAC = 49
++ , OPC_FLOAT = 50, OPC_SWA = 51, OPC_SD = 52, OPC_SW = 53
++ , OPC_SB = 54, OPC_SH = 55, OPC_ALU = 56, OPC_SF = 57
++ , OPC_CUST5 = 60, OPC_CUST6 = 61, OPC_CUST7 = 62, OPC_CUST8 = 63
+ } INSN_OPCODE;
+ 
+ /* Enum declaration for systrapsync insn opcode enums.  */
+@@ -401,8 +401,8 @@ typedef enum ifield_type {
+  , OR1K_F_RESV_20_5, OR1K_F_RESV_20_4, OR1K_F_RESV_15_8, OR1K_F_RESV_15_6
+  , OR1K_F_RESV_10_11, OR1K_F_RESV_10_7, OR1K_F_RESV_10_3, OR1K_F_RESV_10_1
+  , OR1K_F_RESV_7_4, OR1K_F_RESV_5_2, OR1K_F_IMM16_25_5, OR1K_F_IMM16_10_11
+- , OR1K_F_DISP26, OR1K_F_UIMM16, OR1K_F_SIMM16, OR1K_F_UIMM6
+- , OR1K_F_UIMM16_SPLIT, OR1K_F_SIMM16_SPLIT, OR1K_F_MAX
++ , OR1K_F_DISP26, OR1K_F_DISP21, OR1K_F_UIMM16, OR1K_F_SIMM16
++ , OR1K_F_UIMM6, OR1K_F_UIMM16_SPLIT, OR1K_F_SIMM16_SPLIT, OR1K_F_MAX
+ } IFIELD_TYPE;
+ 
+ #define MAX_IFLD ((int) OR1K_F_MAX)
+@@ -622,13 +622,14 @@ typedef enum cgen_operand_type {
+  , OR1K_OPERAND_SYS_SR_OVE, OR1K_OPERAND_SYS_CPUCFGR_OB64S, OR1K_OPERAND_SYS_CPUCFGR_ND, OR1K_OPERAND_SYS_FPCSR_RM
+  , OR1K_OPERAND_MAC_MACHI, OR1K_OPERAND_MAC_MACLO, OR1K_OPERAND_ATOMIC_RESERVE, OR1K_OPERAND_ATOMIC_ADDRESS
+  , OR1K_OPERAND_UIMM6, OR1K_OPERAND_RD, OR1K_OPERAND_RA, OR1K_OPERAND_RB
+- , OR1K_OPERAND_DISP26, OR1K_OPERAND_SIMM16, OR1K_OPERAND_UIMM16, OR1K_OPERAND_SIMM16_SPLIT
+- , OR1K_OPERAND_UIMM16_SPLIT, OR1K_OPERAND_RDSF, OR1K_OPERAND_RASF, OR1K_OPERAND_RBSF
+- , OR1K_OPERAND_RDDF, OR1K_OPERAND_RADF, OR1K_OPERAND_RBDF, OR1K_OPERAND_MAX
++ , OR1K_OPERAND_DISP26, OR1K_OPERAND_DISP21, OR1K_OPERAND_SIMM16, OR1K_OPERAND_UIMM16
++ , OR1K_OPERAND_SIMM16_SPLIT, OR1K_OPERAND_UIMM16_SPLIT, OR1K_OPERAND_RDSF, OR1K_OPERAND_RASF
++ , OR1K_OPERAND_RBSF, OR1K_OPERAND_RDDF, OR1K_OPERAND_RADF, OR1K_OPERAND_RBDF
++ , OR1K_OPERAND_MAX
+ } CGEN_OPERAND_TYPE;
+ 
+ /* Number of operands types.  */
+-#define MAX_OPERANDS 31
++#define MAX_OPERANDS 32
+ 
+ /* Maximum number of operands referenced by any insn.  */
+ #define MAX_OPERAND_INSTANCES 9
+diff --git a/opcodes/or1k-dis.c b/opcodes/or1k-dis.c
+index f54b6b411f..6f8001a2be 100644
+--- a/opcodes/or1k-dis.c
++++ b/opcodes/or1k-dis.c
+@@ -90,6 +90,9 @@ or1k_cgen_print_operand (CGEN_CPU_DESC cd,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      print_address (cd, info, fields->f_disp21, 0|(1<<CGEN_OPERAND_ABS_ADDR), pc, length);
++      break;
+     case OR1K_OPERAND_DISP26 :
+       print_address (cd, info, fields->f_disp26, 0|(1<<CGEN_OPERAND_PCREL_ADDR), pc, length);
+       break;
+diff --git a/opcodes/or1k-ibld.c b/opcodes/or1k-ibld.c
+index 139457c080..acfede7639 100644
+--- a/opcodes/or1k-ibld.c
++++ b/opcodes/or1k-ibld.c
+@@ -573,10 +573,17 @@ or1k_cgen_insert_operand (CGEN_CPU_DESC cd,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      {
++        long value = fields->f_disp21;
++        value = ((((DI) (value) >> (13))) - (((DI) (pc) >> (13))));
++        errmsg = insert_normal (cd, value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_ABS_ADDR), 0, 20, 21, 32, total_length, buffer);
++      }
++      break;
+     case OR1K_OPERAND_DISP26 :
+       {
+         long value = fields->f_disp26;
+-        value = ((SI) (((value) - (pc))) >> (2));
++        value = ((DI) (((value) - (pc))) >> (2));
+         errmsg = insert_normal (cd, value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_PCREL_ADDR), 0, 25, 26, 32, total_length, buffer);
+       }
+       break;
+@@ -688,6 +695,14 @@ or1k_cgen_extract_operand (CGEN_CPU_DESC cd,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      {
++        long value;
++        length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_ABS_ADDR), 0, 20, 21, 32, total_length, pc, & value);
++        value = ((((value) + (((DI) (pc) >> (13))))) << (13));
++        fields->f_disp21 = value;
++      }
++      break;
+     case OR1K_OPERAND_DISP26 :
+       {
+         long value;
+@@ -789,6 +804,9 @@ or1k_cgen_get_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      value = fields->f_disp21;
++      break;
+     case OR1K_OPERAND_DISP26 :
+       value = fields->f_disp26;
+       break;
+@@ -855,6 +873,9 @@ or1k_cgen_get_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+ 
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      value = fields->f_disp21;
++      break;
+     case OR1K_OPERAND_DISP26 :
+       value = fields->f_disp26;
+       break;
+@@ -928,6 +949,9 @@ or1k_cgen_set_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+ {
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      fields->f_disp21 = value;
++      break;
+     case OR1K_OPERAND_DISP26 :
+       fields->f_disp26 = value;
+       break;
+@@ -991,6 +1015,9 @@ or1k_cgen_set_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+ {
+   switch (opindex)
+     {
++    case OR1K_OPERAND_DISP21 :
++      fields->f_disp21 = value;
++      break;
+     case OR1K_OPERAND_DISP26 :
+       fields->f_disp26 = value;
+       break;
+diff --git a/opcodes/or1k-opc.c b/opcodes/or1k-opc.c
+index 0352bc3ebf..ba820a4c57 100644
+--- a/opcodes/or1k-opc.c
++++ b/opcodes/or1k-opc.c
+@@ -52,6 +52,10 @@ static const CGEN_IFMT ifmt_l_j ATTRIBUTE_UNUSED = {
+   32, 32, 0xfc000000, { { F (F_OPCODE) }, { F (F_DISP26) }, { 0 } }
+ };
+ 
++static const CGEN_IFMT ifmt_l_adrp ATTRIBUTE_UNUSED = {
++  32, 32, 0xfc000000, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_DISP21) }, { 0 } }
++};
++
+ static const CGEN_IFMT ifmt_l_jr ATTRIBUTE_UNUSED = {
+   32, 32, 0xffff07ff, { { F (F_OPCODE) }, { F (F_RESV_25_10) }, { F (F_R3) }, { F (F_RESV_10_11) }, { 0 } }
+ };
+@@ -189,6 +193,12 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
+     { { MNEM, ' ', OP (DISP26), 0 } },
+     & ifmt_l_j, { 0x0 }
+   },
++/* l.adrp $rD,${disp21} */
++  {
++    { 0, 0, 0, 0 },
++    { { MNEM, ' ', OP (RD), ',', OP (DISP21), 0 } },
++    & ifmt_l_adrp, { 0x8000000 }
++  },
+ /* l.jal ${disp26} */
+   {
+     { 0, 0, 0, 0 },
+diff --git a/opcodes/or1k-opc.h b/opcodes/or1k-opc.h
+index 5692ea95f1..d2a377257f 100644
+--- a/opcodes/or1k-opc.h
++++ b/opcodes/or1k-opc.h
+@@ -40,37 +40,38 @@ extern "C" {
+ /* -- */
+ /* Enum declaration for or1k instruction types.  */
+ typedef enum cgen_insn_type {
+-  OR1K_INSN_INVALID, OR1K_INSN_L_J, OR1K_INSN_L_JAL, OR1K_INSN_L_JR
+- , OR1K_INSN_L_JALR, OR1K_INSN_L_BNF, OR1K_INSN_L_BF, OR1K_INSN_L_TRAP
+- , OR1K_INSN_L_SYS, OR1K_INSN_L_MSYNC, OR1K_INSN_L_PSYNC, OR1K_INSN_L_CSYNC
+- , OR1K_INSN_L_RFE, OR1K_INSN_L_NOP_IMM, OR1K_INSN_L_NOP, OR1K_INSN_L_MOVHI
+- , OR1K_INSN_L_MACRC, OR1K_INSN_L_MFSPR, OR1K_INSN_L_MTSPR, OR1K_INSN_L_LWZ
+- , OR1K_INSN_L_LWS, OR1K_INSN_L_LWA, OR1K_INSN_L_LBZ, OR1K_INSN_L_LBS
+- , OR1K_INSN_L_LHZ, OR1K_INSN_L_LHS, OR1K_INSN_L_SW, OR1K_INSN_L_SB
+- , OR1K_INSN_L_SH, OR1K_INSN_L_SWA, OR1K_INSN_L_SLL, OR1K_INSN_L_SLLI
+- , OR1K_INSN_L_SRL, OR1K_INSN_L_SRLI, OR1K_INSN_L_SRA, OR1K_INSN_L_SRAI
+- , OR1K_INSN_L_ROR, OR1K_INSN_L_RORI, OR1K_INSN_L_AND, OR1K_INSN_L_OR
+- , OR1K_INSN_L_XOR, OR1K_INSN_L_ADD, OR1K_INSN_L_SUB, OR1K_INSN_L_ADDC
+- , OR1K_INSN_L_MUL, OR1K_INSN_L_MULU, OR1K_INSN_L_DIV, OR1K_INSN_L_DIVU
+- , OR1K_INSN_L_FF1, OR1K_INSN_L_FL1, OR1K_INSN_L_ANDI, OR1K_INSN_L_ORI
+- , OR1K_INSN_L_XORI, OR1K_INSN_L_ADDI, OR1K_INSN_L_ADDIC, OR1K_INSN_L_MULI
+- , OR1K_INSN_L_EXTHS, OR1K_INSN_L_EXTBS, OR1K_INSN_L_EXTHZ, OR1K_INSN_L_EXTBZ
+- , OR1K_INSN_L_EXTWS, OR1K_INSN_L_EXTWZ, OR1K_INSN_L_CMOV, OR1K_INSN_L_SFGTS
+- , OR1K_INSN_L_SFGTSI, OR1K_INSN_L_SFGTU, OR1K_INSN_L_SFGTUI, OR1K_INSN_L_SFGES
+- , OR1K_INSN_L_SFGESI, OR1K_INSN_L_SFGEU, OR1K_INSN_L_SFGEUI, OR1K_INSN_L_SFLTS
+- , OR1K_INSN_L_SFLTSI, OR1K_INSN_L_SFLTU, OR1K_INSN_L_SFLTUI, OR1K_INSN_L_SFLES
+- , OR1K_INSN_L_SFLESI, OR1K_INSN_L_SFLEU, OR1K_INSN_L_SFLEUI, OR1K_INSN_L_SFEQ
+- , OR1K_INSN_L_SFEQI, OR1K_INSN_L_SFNE, OR1K_INSN_L_SFNEI, OR1K_INSN_L_MAC
+- , OR1K_INSN_L_MSB, OR1K_INSN_L_MACI, OR1K_INSN_L_CUST1, OR1K_INSN_L_CUST2
+- , OR1K_INSN_L_CUST3, OR1K_INSN_L_CUST4, OR1K_INSN_L_CUST5, OR1K_INSN_L_CUST6
+- , OR1K_INSN_L_CUST7, OR1K_INSN_L_CUST8, OR1K_INSN_LF_ADD_S, OR1K_INSN_LF_ADD_D
+- , OR1K_INSN_LF_SUB_S, OR1K_INSN_LF_SUB_D, OR1K_INSN_LF_MUL_S, OR1K_INSN_LF_MUL_D
+- , OR1K_INSN_LF_DIV_S, OR1K_INSN_LF_DIV_D, OR1K_INSN_LF_REM_S, OR1K_INSN_LF_REM_D
+- , OR1K_INSN_LF_ITOF_S, OR1K_INSN_LF_ITOF_D, OR1K_INSN_LF_FTOI_S, OR1K_INSN_LF_FTOI_D
+- , OR1K_INSN_LF_EQ_S, OR1K_INSN_LF_EQ_D, OR1K_INSN_LF_NE_S, OR1K_INSN_LF_NE_D
+- , OR1K_INSN_LF_GE_S, OR1K_INSN_LF_GE_D, OR1K_INSN_LF_GT_S, OR1K_INSN_LF_GT_D
+- , OR1K_INSN_LF_LT_S, OR1K_INSN_LF_LT_D, OR1K_INSN_LF_LE_S, OR1K_INSN_LF_LE_D
+- , OR1K_INSN_LF_MADD_S, OR1K_INSN_LF_MADD_D, OR1K_INSN_LF_CUST1_S, OR1K_INSN_LF_CUST1_D
++  OR1K_INSN_INVALID, OR1K_INSN_L_J, OR1K_INSN_L_ADRP, OR1K_INSN_L_JAL
++ , OR1K_INSN_L_JR, OR1K_INSN_L_JALR, OR1K_INSN_L_BNF, OR1K_INSN_L_BF
++ , OR1K_INSN_L_TRAP, OR1K_INSN_L_SYS, OR1K_INSN_L_MSYNC, OR1K_INSN_L_PSYNC
++ , OR1K_INSN_L_CSYNC, OR1K_INSN_L_RFE, OR1K_INSN_L_NOP_IMM, OR1K_INSN_L_NOP
++ , OR1K_INSN_L_MOVHI, OR1K_INSN_L_MACRC, OR1K_INSN_L_MFSPR, OR1K_INSN_L_MTSPR
++ , OR1K_INSN_L_LWZ, OR1K_INSN_L_LWS, OR1K_INSN_L_LWA, OR1K_INSN_L_LBZ
++ , OR1K_INSN_L_LBS, OR1K_INSN_L_LHZ, OR1K_INSN_L_LHS, OR1K_INSN_L_SW
++ , OR1K_INSN_L_SB, OR1K_INSN_L_SH, OR1K_INSN_L_SWA, OR1K_INSN_L_SLL
++ , OR1K_INSN_L_SLLI, OR1K_INSN_L_SRL, OR1K_INSN_L_SRLI, OR1K_INSN_L_SRA
++ , OR1K_INSN_L_SRAI, OR1K_INSN_L_ROR, OR1K_INSN_L_RORI, OR1K_INSN_L_AND
++ , OR1K_INSN_L_OR, OR1K_INSN_L_XOR, OR1K_INSN_L_ADD, OR1K_INSN_L_SUB
++ , OR1K_INSN_L_ADDC, OR1K_INSN_L_MUL, OR1K_INSN_L_MULU, OR1K_INSN_L_DIV
++ , OR1K_INSN_L_DIVU, OR1K_INSN_L_FF1, OR1K_INSN_L_FL1, OR1K_INSN_L_ANDI
++ , OR1K_INSN_L_ORI, OR1K_INSN_L_XORI, OR1K_INSN_L_ADDI, OR1K_INSN_L_ADDIC
++ , OR1K_INSN_L_MULI, OR1K_INSN_L_EXTHS, OR1K_INSN_L_EXTBS, OR1K_INSN_L_EXTHZ
++ , OR1K_INSN_L_EXTBZ, OR1K_INSN_L_EXTWS, OR1K_INSN_L_EXTWZ, OR1K_INSN_L_CMOV
++ , OR1K_INSN_L_SFGTS, OR1K_INSN_L_SFGTSI, OR1K_INSN_L_SFGTU, OR1K_INSN_L_SFGTUI
++ , OR1K_INSN_L_SFGES, OR1K_INSN_L_SFGESI, OR1K_INSN_L_SFGEU, OR1K_INSN_L_SFGEUI
++ , OR1K_INSN_L_SFLTS, OR1K_INSN_L_SFLTSI, OR1K_INSN_L_SFLTU, OR1K_INSN_L_SFLTUI
++ , OR1K_INSN_L_SFLES, OR1K_INSN_L_SFLESI, OR1K_INSN_L_SFLEU, OR1K_INSN_L_SFLEUI
++ , OR1K_INSN_L_SFEQ, OR1K_INSN_L_SFEQI, OR1K_INSN_L_SFNE, OR1K_INSN_L_SFNEI
++ , OR1K_INSN_L_MAC, OR1K_INSN_L_MSB, OR1K_INSN_L_MACI, OR1K_INSN_L_CUST1
++ , OR1K_INSN_L_CUST2, OR1K_INSN_L_CUST3, OR1K_INSN_L_CUST4, OR1K_INSN_L_CUST5
++ , OR1K_INSN_L_CUST6, OR1K_INSN_L_CUST7, OR1K_INSN_L_CUST8, OR1K_INSN_LF_ADD_S
++ , OR1K_INSN_LF_ADD_D, OR1K_INSN_LF_SUB_S, OR1K_INSN_LF_SUB_D, OR1K_INSN_LF_MUL_S
++ , OR1K_INSN_LF_MUL_D, OR1K_INSN_LF_DIV_S, OR1K_INSN_LF_DIV_D, OR1K_INSN_LF_REM_S
++ , OR1K_INSN_LF_REM_D, OR1K_INSN_LF_ITOF_S, OR1K_INSN_LF_ITOF_D, OR1K_INSN_LF_FTOI_S
++ , OR1K_INSN_LF_FTOI_D, OR1K_INSN_LF_EQ_S, OR1K_INSN_LF_EQ_D, OR1K_INSN_LF_NE_S
++ , OR1K_INSN_LF_NE_D, OR1K_INSN_LF_GE_S, OR1K_INSN_LF_GE_D, OR1K_INSN_LF_GT_S
++ , OR1K_INSN_LF_GT_D, OR1K_INSN_LF_LT_S, OR1K_INSN_LF_LT_D, OR1K_INSN_LF_LE_S
++ , OR1K_INSN_LF_LE_D, OR1K_INSN_LF_MADD_S, OR1K_INSN_LF_MADD_D, OR1K_INSN_LF_CUST1_S
++ , OR1K_INSN_LF_CUST1_D
+ } CGEN_INSN_TYPE;
+ 
+ /* Index of `invalid' insn place holder.  */
+@@ -116,6 +117,7 @@ struct cgen_fields
+   long f_imm16_25_5;
+   long f_imm16_10_11;
+   long f_disp26;
++  long f_disp21;
+   long f_uimm16;
+   long f_simm16;
+   long f_uimm6;
+diff --git a/opcodes/or1k-opinst.c b/opcodes/or1k-opinst.c
+index 936ed67f1b..c267efb6c4 100644
+--- a/opcodes/or1k-opinst.c
++++ b/opcodes/or1k-opinst.c
+@@ -49,6 +49,12 @@ static const CGEN_OPINST sfmt_l_j_ops[] ATTRIBUTE_UNUSED = {
+   { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
+ };
+ 
++static const CGEN_OPINST sfmt_l_adrp_ops[] ATTRIBUTE_UNUSED = {
++  { INPUT, "disp21", HW_H_IADDR, CGEN_MODE_UDI, OP_ENT (DISP21), 0, 0 },
++  { OUTPUT, "rD", HW_H_GPR, CGEN_MODE_UDI, OP_ENT (RD), 0, 0 },
++  { END, (const char *)0, (enum cgen_hw_type)0, (enum cgen_mode)0, (enum cgen_operand_type)0, 0, 0 }
++};
++
+ static const CGEN_OPINST sfmt_l_jal_ops[] ATTRIBUTE_UNUSED = {
+   { INPUT, "disp26", HW_H_IADDR, CGEN_MODE_UDI, OP_ENT (DISP26), 0, 0 },
+   { INPUT, "pc", HW_H_PC, CGEN_MODE_UDI, 0, 0, 0 },
+@@ -453,6 +459,7 @@ static const CGEN_OPINST sfmt_lf_madd_d_ops[] ATTRIBUTE_UNUSED = {
+ static const CGEN_OPINST *or1k_cgen_opinst_table[MAX_INSNS] = {
+   0,
+   & sfmt_l_j_ops[0],
++  & sfmt_l_adrp_ops[0],
+   & sfmt_l_jal_ops[0],
+   & sfmt_l_jr_ops[0],
+   & sfmt_l_jalr_ops[0],
+-- 
+2.18.1
+

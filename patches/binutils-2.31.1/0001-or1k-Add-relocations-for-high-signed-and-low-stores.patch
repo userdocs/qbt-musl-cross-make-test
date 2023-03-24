@@ -1,0 +1,2392 @@
+From 1c4f3780f7d939402cfe555007ebff45c8e38951 Mon Sep 17 00:00:00 2001
+From: Richard Henderson <rth@redhat.com>
+Date: Fri, 5 Oct 2018 11:41:40 +0900
+Subject: [PATCH 1/4] or1k: Add relocations for high-signed and low-stores
+
+This patch adds the following target relocations:
+
+ - BFD_RELOC_HI16_S		High 16-bit relocation, for used with signed
+   asm: ha()			lower.
+ - BFD_RELOC_HI16_S_GOTOFF	High 16-bit GOT offset relocation for local
+   asm: gotoffha()		symbols, for use with signed lower.
+ - BFD_RELOC_OR1K_TLS_IE_AHI16	High 16-bit TLS relocation with initial
+   asm: gottpoffha()		executable calculation, for use with signed
+				lower.
+ - BFD_RELOC_OR1K_TLS_LE_AHI16	High 16-bit TLS relocation for local executable
+   asm: tpoffha()		variables, for use with signed lower.
+
+ - BFD_RELOC_OR1K_SLO16		Split lower 16-bit relocation, used with
+   asm: lo()			OpenRISC store instructions.
+ - BFD_RELOC_OR1K_GOTOFF_SLO16	Split lower 16-bit GOT offset relocation for
+   asm: gotofflo()		local symbols, used with OpenRISC store
+				instructions.
+ - BFD_RELOC_OR1K_TLS_LE_SLO16	Split lower 16-bit relocation for TLS local
+   asm: tpofflo()		executable variables, used with OpenRISC store
+				instructions.
+
+bfd/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+	    Stafford Horne  <shorne@gmail.com>
+
+	* bfd-in2.h: Regenerated.
+	* elf32-or1k.c (N_ONES): New macro.
+	(or1k_elf_howto_table): Fix R_OR1K_PLT26 to complain on overflow.
+	Add definitions for R_OR1K_TLS_TPOFF, R_OR1K_TLS_DTPOFF,
+	R_OR1K_TLS_DTPMOD, R_OR1K_AHI16, R_OR1K_GOTOFF_AHI16,
+	R_OR1K_TLS_IE_AHI16, R_OR1K_TLS_LE_AHI16, R_OR1K_SLO16,
+	R_OR1K_GOTOFF_SLO16, R_OR1K_TLS_LE_SLO16.
+	(or1k_reloc_map): Add entries for BFD_RELOC_HI16_S,
+	BFD_RELOC_LO16_GOTOFF, BFD_RELOC_HI16_GOTOFF, BFD_RELOC_HI16_S_GOTOFF,
+	BFD_RELOC_OR1K_TLS_IE_AHI16, BFD_RELOC_OR1K_TLS_LE_AHI16,
+	BFD_RELOC_OR1K_SLO16, BFD_RELOC_OR1K_GOTOFF_SLO16,
+	BFD_RELOC_OR1K_TLS_LE_SLO16.
+	(or1k_reloc_type_lookup): Change search loop to start ad index 0 and
+	also check results before returning.
+	(or1k_reloc_name_lookup): Simplify loop to use R_OR1K_max as index
+	limit.
+	(or1k_final_link_relocate): New function.
+	(or1k_elf_relocate_section): Add support for new AHI and SLO
+	relocations.  Use or1k_final_link_relocate instead of generic
+	_bfd_final_link_relocate.
+	(or1k_elf_check_relocs): Add support for new AHI and SLO relocations.
+	* reloc.c: Add new enums for BFD_RELOC_OR1K_SLO16,
+	BFD_RELOC_OR1K_GOTOFF_SLO16, BFD_RELOC_OR1K_TLS_IE_AHI16,
+	BFD_RELOC_OR1K_TLS_IE_AHI16, BFD_RELOC_OR1K_TLS_LE_AHI16,
+	BFD_RELOC_OR1K_TLS_LE_SLO16.  Remove unused BFD_RELOC_OR1K_GOTOFF_HI16
+	and BFD_RELOC_OR1K_GOTOFF_LO16.
+	* libbfd.h: Regenerated.
+
+cpu/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* or1k.opc: Add RTYPE_ enum.
+	(INVALID_STORE_RELOC): New string.
+	(or1k_imm16_relocs): New array array.
+	(parse_reloc): New static function that just does the parsing.
+	(parse_imm16): New static function for generic parsing.
+	(parse_simm16): Change to just call parse_imm16.
+	(parse_simm16_split): New function.
+	(parse_uimm16): Change to call parse_imm16.
+	(parse_uimm16_split): New function.
+	* or1korbis.cpu (simm16-split): Change to use new simm16_split.
+	(uimm16-split): Change to use new uimm16_split.
+
+gas/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* testsuite/gas/or1k/allinsn.d (l_ha): Add result for ha() relocation.
+	* testsuite/gas/or1k/allinsn.s (l_ha): Add test for ha() relocations.
+	* testsuite/gas/or1k/allinsn.exp: Renamed to or1k.exp.
+	* testsuite/gas/or1k/or1k.exp: Add reloc-2 list test.
+	* testsuite/gas/or1k/reloc-1.d: New file.
+	* testsuite/gas/or1k/reloc-1.s: New file.
+	* testsuite/gas/or1k/reloc-2.l: New file.
+	* testsuite/gas/or1k/reloc-2.s: New file.
+
+include/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* elf/or1k.h (elf_or1k_reloc_type): Add R_OR1K_AHI16,
+	R_OR1K_GOTOFF_AHI16, R_OR1K_TLS_IE_AHI16, R_OR1K_TLS_LE_AHI16,
+	R_OR1K_SLO16, R_OR1K_GOTOFF_SLO16, R_OR1K_TLS_LE_SLO16.
+
+ld/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* testsuite/ld-or1k/offsets1.d: New file.
+	* testsuite/ld-or1k/offsets1.s: New file.
+	* testsuite/ld-or1k/or1k.exp: New file.
+
+opcodes/ChangeLog:
+
+yyyy-mm-dd  Richard Henderson  <rth@twiddle.net>
+
+	* or1k-asm.c: Regenerate.
+---
+ bfd/ChangeLog                                 |  31 ++
+ bfd/bfd-in2.h                                 |   7 +-
+ bfd/elf32-or1k.c                              | 335 ++++++++++--
+ bfd/libbfd.h                                  |   7 +-
+ bfd/reloc.c                                   |  12 +-
+ cpu/ChangeLog                                 |  14 +
+ cpu/or1k.opc                                  | 477 +++++++-----------
+ cpu/or1korbis.cpu                             |   4 +-
+ gas/ChangeLog                                 |  11 +
+ gas/testsuite/gas/or1k/allinsn.d              |  19 +-
+ gas/testsuite/gas/or1k/allinsn.s              |   2 +
+ .../gas/or1k/{allinsn.exp => or1k.exp}        |   1 +
+ gas/testsuite/gas/or1k/reloc-1.d              |  56 ++
+ gas/testsuite/gas/or1k/reloc-1.s              |  56 ++
+ gas/testsuite/gas/or1k/reloc-2.l              |  10 +
+ gas/testsuite/gas/or1k/reloc-2.s              |  12 +
+ include/ChangeLog                             |   6 +
+ include/elf/or1k.h                            |   7 +
+ ld/ChangeLog                                  |   6 +
+ ld/testsuite/ld-or1k/offsets1.d               | 212 ++++++++
+ ld/testsuite/ld-or1k/offsets1.s               |  14 +
+ ld/testsuite/ld-or1k/or1k.exp                 |  69 +++
+ opcodes/ChangeLog                             |   4 +
+ opcodes/or1k-asm.c                            | 440 ++++++----------
+ 24 files changed, 1199 insertions(+), 613 deletions(-)
+ rename gas/testsuite/gas/or1k/{allinsn.exp => or1k.exp} (83%)
+ create mode 100644 gas/testsuite/gas/or1k/reloc-1.d
+ create mode 100644 gas/testsuite/gas/or1k/reloc-1.s
+ create mode 100644 gas/testsuite/gas/or1k/reloc-2.l
+ create mode 100644 gas/testsuite/gas/or1k/reloc-2.s
+ create mode 100644 ld/testsuite/ld-or1k/offsets1.d
+ create mode 100644 ld/testsuite/ld-or1k/offsets1.s
+ create mode 100644 ld/testsuite/ld-or1k/or1k.exp
+
+diff --git a/bfd/bfd-in2.h b/bfd/bfd-in2.h
+index 59819224a6..cc112f1b49 100644
+--- a/bfd/bfd-in2.h
++++ b/bfd/bfd-in2.h
+@@ -5472,12 +5472,12 @@ then it may be truncated to 8 bits.  */
+ 
+ /* OpenRISC 1000 Relocations.  */
+   BFD_RELOC_OR1K_REL_26,
++  BFD_RELOC_OR1K_SLO16,
+   BFD_RELOC_OR1K_GOTPC_HI16,
+   BFD_RELOC_OR1K_GOTPC_LO16,
+   BFD_RELOC_OR1K_GOT16,
+   BFD_RELOC_OR1K_PLT26,
+-  BFD_RELOC_OR1K_GOTOFF_HI16,
+-  BFD_RELOC_OR1K_GOTOFF_LO16,
++  BFD_RELOC_OR1K_GOTOFF_SLO16,
+   BFD_RELOC_OR1K_COPY,
+   BFD_RELOC_OR1K_GLOB_DAT,
+   BFD_RELOC_OR1K_JMP_SLOT,
+@@ -5489,9 +5489,12 @@ then it may be truncated to 8 bits.  */
+   BFD_RELOC_OR1K_TLS_LDO_HI16,
+   BFD_RELOC_OR1K_TLS_LDO_LO16,
+   BFD_RELOC_OR1K_TLS_IE_HI16,
++  BFD_RELOC_OR1K_TLS_IE_AHI16,
+   BFD_RELOC_OR1K_TLS_IE_LO16,
+   BFD_RELOC_OR1K_TLS_LE_HI16,
++  BFD_RELOC_OR1K_TLS_LE_AHI16,
+   BFD_RELOC_OR1K_TLS_LE_LO16,
++  BFD_RELOC_OR1K_TLS_LE_SLO16,
+   BFD_RELOC_OR1K_TLS_TPOFF,
+   BFD_RELOC_OR1K_TLS_DTPOFF,
+   BFD_RELOC_OR1K_TLS_DTPMOD,
+diff --git a/bfd/elf32-or1k.c b/bfd/elf32-or1k.c
+index 91b780fedf..d888c9fe6c 100644
+--- a/bfd/elf32-or1k.c
++++ b/bfd/elf32-or1k.c
+@@ -27,6 +27,8 @@
+ #include "elf/or1k.h"
+ #include "libiberty.h"
+ 
++#define N_ONES(X)	(((bfd_vma)2 << (X)) - 1)
++
+ #define PLT_ENTRY_SIZE 20
+ 
+ #define PLT0_ENTRY_WORD0 0x19800000 /* l.movhi r12, 0 <- hi(.got+4) */
+@@ -278,7 +280,7 @@ static reloc_howto_type or1k_elf_howto_table[] =
+ 	 26,			/* Bitsize.  */
+ 	 TRUE,			/* PC_relative.  */
+ 	 0,			/* Bitpos.  */
+-	 complain_overflow_dont, /* Complain on overflow.  */
++	 complain_overflow_signed, /* Complain on overflow.  */
+ 	 bfd_elf_generic_reloc,/* Special Function.  */
+ 	 "R_OR1K_PLT26",	/* Name.  */
+ 	 FALSE,		/* Partial Inplace.  */
+@@ -510,6 +512,145 @@ static reloc_howto_type or1k_elf_howto_table[] =
+ 	 0xffff,		/* dst_mask */
+ 	 FALSE),		/* pcrel_offset */
+ 
++  HOWTO (R_OR1K_TLS_TPOFF,	/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 32,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_bitfield, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_TPOFF",    /* name */
++	 FALSE,			/* partial_inplace */
++	 0xffffffff,		/* src_mask */
++	 0xffffffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_DTPOFF,	/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 32,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_bitfield, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_DTPOFF",   /* name */
++	 FALSE,			/* partial_inplace */
++	 0xffffffff,		/* src_mask */
++	 0xffffffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_DTPMOD,	/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 32,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_bitfield, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_DTPMOD",   /* name */
++	 FALSE,			/* partial_inplace */
++	 0xffffffff,		/* src_mask */
++	 0xffffffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_AHI16,		/* type */
++	 16,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_AHI16",	/* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_GOTOFF_AHI16,	/* type */
++	 16,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_GOTOFF_AHI16", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_IE_AHI16,   /* type */
++	 16,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_IE_AHI16", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_LE_AHI16,	/* type */
++	 16,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_LE_AHI16", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_SLO16,		/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_SLO16",	/* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_GOTOFF_SLO16,	/* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_GOTOFF_SLO16", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
++
++  HOWTO (R_OR1K_TLS_LE_SLO16,   /* type */
++	 0,			/* rightshift */
++	 2,			/* size (0 = byte, 1 = short, 2 = long) */
++	 16,			/* bitsize */
++	 FALSE,			/* pc_relative */
++	 0,			/* bitpos */
++	 complain_overflow_dont, /* complain_on_overflow */
++	 bfd_elf_generic_reloc, /* special_function */
++	 "R_OR1K_TLS_LE_SLO16", /* name */
++	 FALSE,			/* partial_inplace */
++	 0x0,			/* src_mask */
++	 0xffff,		/* dst_mask */
++	 FALSE),		/* pcrel_offset */
+ };
+ 
+ /* Map BFD reloc types to Or1k ELF reloc types.  */
+@@ -528,18 +669,20 @@ static const struct or1k_reloc_map or1k_reloc_map[] =
+   { BFD_RELOC_8,		R_OR1K_8 },
+   { BFD_RELOC_LO16,		R_OR1K_LO_16_IN_INSN },
+   { BFD_RELOC_HI16,		R_OR1K_HI_16_IN_INSN },
++  { BFD_RELOC_HI16_S,		R_OR1K_AHI16 },
+   { BFD_RELOC_OR1K_REL_26,	R_OR1K_INSN_REL_26 },
+   { BFD_RELOC_VTABLE_ENTRY,	R_OR1K_GNU_VTENTRY },
+   { BFD_RELOC_VTABLE_INHERIT,	R_OR1K_GNU_VTINHERIT },
+   { BFD_RELOC_32_PCREL,		R_OR1K_32_PCREL },
+   { BFD_RELOC_16_PCREL,		R_OR1K_16_PCREL },
+   { BFD_RELOC_8_PCREL,		R_OR1K_8_PCREL },
++  { BFD_RELOC_LO16_GOTOFF,	R_OR1K_GOTOFF_LO16 },
++  { BFD_RELOC_HI16_GOTOFF,	R_OR1K_GOTOFF_HI16 },
++  { BFD_RELOC_HI16_S_GOTOFF,	R_OR1K_GOTOFF_AHI16 },
+   { BFD_RELOC_OR1K_GOTPC_HI16,	R_OR1K_GOTPC_HI16 },
+   { BFD_RELOC_OR1K_GOTPC_LO16,	R_OR1K_GOTPC_LO16 },
+   { BFD_RELOC_OR1K_GOT16,	R_OR1K_GOT16 },
+   { BFD_RELOC_OR1K_PLT26,	R_OR1K_PLT26 },
+-  { BFD_RELOC_OR1K_GOTOFF_HI16, R_OR1K_GOTOFF_HI16 },
+-  { BFD_RELOC_OR1K_GOTOFF_LO16, R_OR1K_GOTOFF_LO16 },
+   { BFD_RELOC_OR1K_GLOB_DAT,	R_OR1K_GLOB_DAT },
+   { BFD_RELOC_OR1K_COPY,	R_OR1K_COPY },
+   { BFD_RELOC_OR1K_JMP_SLOT,	R_OR1K_JMP_SLOT },
+@@ -552,8 +695,13 @@ static const struct or1k_reloc_map or1k_reloc_map[] =
+   { BFD_RELOC_OR1K_TLS_LDO_LO16,	R_OR1K_TLS_LDO_LO16 },
+   { BFD_RELOC_OR1K_TLS_IE_HI16, R_OR1K_TLS_IE_HI16 },
+   { BFD_RELOC_OR1K_TLS_IE_LO16, R_OR1K_TLS_IE_LO16 },
++  { BFD_RELOC_OR1K_TLS_IE_AHI16, R_OR1K_TLS_IE_AHI16 },
+   { BFD_RELOC_OR1K_TLS_LE_HI16, R_OR1K_TLS_LE_HI16 },
+   { BFD_RELOC_OR1K_TLS_LE_LO16, R_OR1K_TLS_LE_LO16 },
++  { BFD_RELOC_OR1K_TLS_LE_AHI16, R_OR1K_TLS_LE_AHI16 },
++  { BFD_RELOC_OR1K_SLO16,	R_OR1K_SLO16 },
++  { BFD_RELOC_OR1K_GOTOFF_SLO16, R_OR1K_GOTOFF_SLO16 },
++  { BFD_RELOC_OR1K_TLS_LE_SLO16, R_OR1K_TLS_LE_SLO16 },
+ };
+ 
+ #define TLS_UNKNOWN    0
+@@ -671,13 +819,19 @@ or1k_elf_link_hash_table_create (bfd *abfd)
+ 
+ static reloc_howto_type *
+ or1k_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
+-			bfd_reloc_code_real_type code)
++			bfd_reloc_code_real_type bcode)
+ {
+   unsigned int i;
+ 
+-  for (i = ARRAY_SIZE (or1k_reloc_map); i--;)
+-    if (or1k_reloc_map[i].bfd_reloc_val == code)
+-      return & or1k_elf_howto_table[or1k_reloc_map[i].or1k_reloc_val];
++  for (i = 0; i < ARRAY_SIZE (or1k_reloc_map); i++)
++    if (or1k_reloc_map[i].bfd_reloc_val == bcode)
++      {
++	unsigned int ocode = or1k_reloc_map[i].or1k_reloc_val;
++	if (ocode < (unsigned int) R_OR1K_max)
++	  return &or1k_elf_howto_table[ocode];
++	else
++	  break;
++      }
+ 
+   return NULL;
+ }
+@@ -688,10 +842,7 @@ or1k_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
+ {
+   unsigned int i;
+ 
+-  for (i = 0;
+-       i < (sizeof (or1k_elf_howto_table)
+-	    / sizeof (or1k_elf_howto_table[0]));
+-       i++)
++  for (i = 0; i < R_OR1K_max; i++)
+     if (or1k_elf_howto_table[i].name != NULL
+ 	&& strcasecmp (or1k_elf_howto_table[i].name, r_name) == 0)
+       return &or1k_elf_howto_table[i];
+@@ -736,6 +887,109 @@ tpoff (struct bfd_link_info *info, bfd_vma address)
+   return (address - elf_hash_table (info)->tls_sec->vma);
+ }
+ 
++/* Like _bfd_final_link_relocate, but handles non-contiguous fields.  */
++
++static bfd_reloc_status_type
++or1k_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
++			  asection *input_section, bfd_byte *contents,
++			  bfd_vma offset, bfd_vma value)
++{
++  bfd_reloc_status_type status = bfd_reloc_ok;
++  int size = bfd_get_reloc_size (howto);
++  bfd_vma x;
++
++  /* Sanity check the address.  */
++  if (offset + size > bfd_get_section_limit_octets (input_bfd, input_section))
++    return bfd_reloc_outofrange;
++
++  if (howto->pc_relative)
++    {
++      value -= (input_section->output_section->vma
++		+ input_section->output_offset);
++      if (howto->pcrel_offset)
++	value -= offset;
++    }
++
++  switch (howto->type)
++    {
++    case R_OR1K_AHI16:
++    case R_OR1K_GOTOFF_AHI16:
++    case R_OR1K_TLS_IE_AHI16:
++    case R_OR1K_TLS_LE_AHI16:
++      /* Adjust the operand to match with a signed LO16.  */
++      value += 0x8000;
++      break;
++
++    case R_OR1K_INSN_REL_26:
++      /* Diagnose mis-aligned branch targets.  */
++      if (value & 3)
++	status = bfd_reloc_dangerous;
++      break;
++    }
++
++  status = bfd_check_overflow (howto->complain_on_overflow,
++			       howto->bitsize,
++			       howto->rightshift,
++			       bfd_arch_bits_per_address (input_bfd),
++			       value);
++  value >>= howto->rightshift;
++
++  /* If we're overwriting the entire destination,
++     then no need to read the current contents.  */
++  if (size == 0 || howto->dst_mask == N_ONES (size))
++    x = 0;
++  else
++    {
++      BFD_ASSERT (size == 4);
++      x = bfd_get_32 (input_bfd, contents + offset);
++    }
++
++  switch (howto->type)
++    {
++    case R_OR1K_SLO16:
++    case R_OR1K_GOTOFF_SLO16:
++    case R_OR1K_TLS_LE_SLO16:
++      /* The split imm16 field used for stores.  */
++      x = (x & ~0x3e007ff) | ((value & 0xf800) << 10) | (value & 0x7ff);
++      break;
++
++    default:
++      {
++	bfd_vma fieldmask = howto->dst_mask;
++	value <<= howto->bitpos;
++	x = (x & ~fieldmask) | (value & fieldmask);
++      }
++      break;
++    }
++
++  /* Put the relocated value back in the object file.  */
++  switch (size)
++    {
++    case 0:
++      break;
++    case 1:
++      bfd_put_8 (input_bfd, x, contents + offset);
++      break;
++    case 2:
++      bfd_put_16 (input_bfd, x, contents + offset);
++      break;
++    case 4:
++      bfd_put_32 (input_bfd, x, contents + offset);
++      break;
++#ifdef BFD64
++    case 8:
++      bfd_put_64 (input_bfd, x, contents + offset);
++      break;
++#endif
++    default:
++      _bfd_error_handler
++	(_("%pB: Cannot handle relocation value size of %d"),
++	 input_bfd, size);
++      abort ();
++    }
++  return status;
++}
++
+ /* Relocate an Or1k ELF section.
+ 
+    The RELOCATE_SECTION function is called by the new ELF backend linker
+@@ -972,6 +1226,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 
+ 	case R_OR1K_GOTOFF_LO16:
+ 	case R_OR1K_GOTOFF_HI16:
++	case R_OR1K_GOTOFF_AHI16:
++	case R_OR1K_GOTOFF_SLO16:
+ 	  /* Relocation is offset from GOT.  */
+ 	  BFD_ASSERT (sgot != NULL);
+ 	  relocation
+@@ -983,6 +1239,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	case R_OR1K_INSN_REL_26:
+ 	case R_OR1K_HI_16_IN_INSN:
+ 	case R_OR1K_LO_16_IN_INSN:
++	case R_OR1K_AHI16:
++	case R_OR1K_SLO16:
+ 	case R_OR1K_32:
+ 	  /* R_OR1K_16? */
+ 	  {
+@@ -1080,11 +1338,11 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	  bfd_set_error (bfd_error_bad_value);
+ 	  return FALSE;
+ 
+-
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
++	case R_OR1K_TLS_IE_AHI16:
+ 	  {
+ 	    bfd_vma gotoff;
+ 	    Elf_Internal_Rela rela;
+@@ -1196,9 +1454,11 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	    relocation = sgot->output_offset + gotoff;
+ 	    break;
+ 	  }
++
+ 	case R_OR1K_TLS_LE_HI16:
+ 	case R_OR1K_TLS_LE_LO16:
+-
++	case R_OR1K_TLS_LE_AHI16:
++	case R_OR1K_TLS_LE_SLO16:
+ 	  /* Relocation is offset from TP.  */
+ 	  relocation = tpoff (info, relocation);
+ 	  break;
+@@ -1218,8 +1478,9 @@ or1k_elf_relocate_section (bfd *output_bfd,
+ 	default:
+ 	  break;
+ 	}
+-      r = _bfd_final_link_relocate (howto, input_bfd, input_section, contents,
+-				    rel->r_offset, relocation, rel->r_addend);
++
++      r = or1k_final_link_relocate (howto, input_bfd, input_section, contents,
++				    rel->r_offset, relocation + rel->r_addend);
+ 
+       if (r != bfd_reloc_ok)
+ 	{
+@@ -1329,6 +1590,7 @@ or1k_elf_check_relocs (bfd *abfd,
+       struct elf_link_hash_entry *h;
+       unsigned long r_symndx;
+       unsigned char tls_type;
++      int r_type;
+ 
+       r_symndx = ELF32_R_SYM (rel->r_info);
+       if (r_symndx < symtab_hdr->sh_info)
+@@ -1341,7 +1603,8 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+ 	}
+ 
+-      switch (ELF32_R_TYPE (rel->r_info))
++      r_type = ELF32_R_TYPE (rel->r_info);
++      switch (r_type)
+ 	{
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
+@@ -1355,10 +1618,13 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	  break;
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
++	case R_OR1K_TLS_IE_AHI16:
+ 	  tls_type = TLS_IE;
+ 	  break;
+ 	case R_OR1K_TLS_LE_HI16:
+ 	case R_OR1K_TLS_LE_LO16:
++	case R_OR1K_TLS_LE_AHI16:
++	case R_OR1K_TLS_LE_SLO16:
+ 	  tls_type = TLS_LE;
+ 	  break;
+ 	default:
+@@ -1387,7 +1653,7 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	  local_tls_type[r_symndx] = tls_type;
+ 	}
+ 
+-      switch (ELF32_R_TYPE (rel->r_info))
++      switch (r_type)
+ 	{
+ 	  /* This relocation describes the C++ object vtable hierarchy.
+ 	     Reconstruct it for later use during GC.  */
+@@ -1415,23 +1681,11 @@ or1k_elf_check_relocs (bfd *abfd,
+ 	  break;
+ 
+ 	case R_OR1K_GOT16:
+-	case R_OR1K_GOTOFF_HI16:
+-	case R_OR1K_GOTOFF_LO16:
+ 	case R_OR1K_TLS_GD_HI16:
+ 	case R_OR1K_TLS_GD_LO16:
+ 	case R_OR1K_TLS_IE_HI16:
+ 	case R_OR1K_TLS_IE_LO16:
+-	  if (htab->root.sgot == NULL)
+-	    {
+-	      if (dynobj == NULL)
+-		htab->root.dynobj = dynobj = abfd;
+-	      if (!_bfd_elf_create_got_section (dynobj, info))
+-		return FALSE;
+-	    }
+-
+-	  if (ELF32_R_TYPE (rel->r_info) != R_OR1K_GOTOFF_HI16 &&
+-	      ELF32_R_TYPE (rel->r_info) != R_OR1K_GOTOFF_LO16)
+-	    {
++	case R_OR1K_TLS_IE_AHI16:
+ 	      if (h != NULL)
+ 		h->got.refcount += 1;
+ 	      else
+@@ -1453,14 +1707,27 @@ or1k_elf_check_relocs (bfd *abfd,
+ 		    }
+ 		  local_got_refcounts[r_symndx] += 1;
+ 		}
++	  /* FALLTHRU */
++
++	case R_OR1K_GOTOFF_HI16:
++	case R_OR1K_GOTOFF_LO16:
++	case R_OR1K_GOTOFF_AHI16:
++	case R_OR1K_GOTOFF_SLO16:
++	  if (htab->root.sgot == NULL)
++	    {
++	      if (dynobj == NULL)
++		htab->root.dynobj = dynobj = abfd;
++	      if (!_bfd_elf_create_got_section (dynobj, info))
++		return FALSE;
+ 	    }
+ 	  break;
+ 
+ 	case R_OR1K_INSN_REL_26:
+ 	case R_OR1K_HI_16_IN_INSN:
+ 	case R_OR1K_LO_16_IN_INSN:
++	case R_OR1K_AHI16:
++	case R_OR1K_SLO16:
+ 	case R_OR1K_32:
+-	  /* R_OR1K_16? */
+ 	  {
+ 	    if (h != NULL && !bfd_link_pic (info))
+ 	      {
+@@ -1469,7 +1736,7 @@ or1k_elf_check_relocs (bfd *abfd,
+ 
+ 		/* We may also need a .plt entry.  */
+ 		h->plt.refcount += 1;
+-		if (ELF32_R_TYPE (rel->r_info) != R_OR1K_INSN_REL_26)
++		if (r_type != R_OR1K_INSN_REL_26)
+ 		  h->pointer_equality_needed = 1;
+ 	      }
+ 
+@@ -1497,7 +1764,7 @@ or1k_elf_check_relocs (bfd *abfd,
+ 
+ 	    if ((bfd_link_pic (info)
+ 		 && (sec->flags & SEC_ALLOC) != 0
+-		 && (ELF32_R_TYPE (rel->r_info) != R_OR1K_INSN_REL_26
++		 && (r_type != R_OR1K_INSN_REL_26
+ 		     || (h != NULL
+ 			 && (!SYMBOLIC_BIND (info, h)
+ 			     || h->root.type == bfd_link_hash_defweak
+@@ -1593,7 +1860,7 @@ or1k_elf_check_relocs (bfd *abfd,
+ 		  }
+ 
+ 		p->count += 1;
+-		if (ELF32_R_TYPE (rel->r_info) == R_OR1K_INSN_REL_26)
++		if (r_type == R_OR1K_INSN_REL_26)
+ 		  p->pc_count += 1;
+ 	      }
+ 	  }
+diff --git a/bfd/libbfd.h b/bfd/libbfd.h
+index d37716c363..6cb0caef7e 100644
+--- a/bfd/libbfd.h
++++ b/bfd/libbfd.h
+@@ -2664,12 +2664,12 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
+   "BFD_RELOC_CRIS_DTPMOD",
+   "BFD_RELOC_CRIS_32_IE",
+   "BFD_RELOC_OR1K_REL_26",
++  "BFD_RELOC_OR1K_SLO16",
+   "BFD_RELOC_OR1K_GOTPC_HI16",
+   "BFD_RELOC_OR1K_GOTPC_LO16",
+   "BFD_RELOC_OR1K_GOT16",
+   "BFD_RELOC_OR1K_PLT26",
+-  "BFD_RELOC_OR1K_GOTOFF_HI16",
+-  "BFD_RELOC_OR1K_GOTOFF_LO16",
++  "BFD_RELOC_OR1K_GOTOFF_SLO16",
+   "BFD_RELOC_OR1K_COPY",
+   "BFD_RELOC_OR1K_GLOB_DAT",
+   "BFD_RELOC_OR1K_JMP_SLOT",
+@@ -2681,9 +2681,12 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
+   "BFD_RELOC_OR1K_TLS_LDO_HI16",
+   "BFD_RELOC_OR1K_TLS_LDO_LO16",
+   "BFD_RELOC_OR1K_TLS_IE_HI16",
++  "BFD_RELOC_OR1K_TLS_IE_AHI16",
+   "BFD_RELOC_OR1K_TLS_IE_LO16",
+   "BFD_RELOC_OR1K_TLS_LE_HI16",
++  "BFD_RELOC_OR1K_TLS_LE_AHI16",
+   "BFD_RELOC_OR1K_TLS_LE_LO16",
++  "BFD_RELOC_OR1K_TLS_LE_SLO16",
+   "BFD_RELOC_OR1K_TLS_TPOFF",
+   "BFD_RELOC_OR1K_TLS_DTPOFF",
+   "BFD_RELOC_OR1K_TLS_DTPMOD",
+diff --git a/bfd/reloc.c b/bfd/reloc.c
+index 07be1a4c7b..353a240477 100644
+--- a/bfd/reloc.c
++++ b/bfd/reloc.c
+@@ -6145,6 +6145,8 @@ ENUMDOC
+ 
+ ENUM
+   BFD_RELOC_OR1K_REL_26
++ENUMX
++  BFD_RELOC_OR1K_SLO16
+ ENUMX
+   BFD_RELOC_OR1K_GOTPC_HI16
+ ENUMX
+@@ -6154,9 +6156,7 @@ ENUMX
+ ENUMX
+   BFD_RELOC_OR1K_PLT26
+ ENUMX
+-  BFD_RELOC_OR1K_GOTOFF_HI16
+-ENUMX
+-  BFD_RELOC_OR1K_GOTOFF_LO16
++  BFD_RELOC_OR1K_GOTOFF_SLO16
+ ENUMX
+   BFD_RELOC_OR1K_COPY
+ ENUMX
+@@ -6179,12 +6179,18 @@ ENUMX
+   BFD_RELOC_OR1K_TLS_LDO_LO16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_IE_HI16
++ENUMX
++  BFD_RELOC_OR1K_TLS_IE_AHI16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_IE_LO16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LE_HI16
++ENUMX
++  BFD_RELOC_OR1K_TLS_LE_AHI16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_LE_LO16
++ENUMX
++  BFD_RELOC_OR1K_TLS_LE_SLO16
+ ENUMX
+   BFD_RELOC_OR1K_TLS_TPOFF
+ ENUMX
+diff --git a/cpu/or1k.opc b/cpu/or1k.opc
+index 98b7532746..1d55fbc284 100644
+--- a/cpu/or1k.opc
++++ b/cpu/or1k.opc
+@@ -48,6 +48,8 @@
+ /* -- asm.c */
+ 
+ static const char * MISSING_CLOSING_PARENTHESIS = N_("missing `)'");
++static const char * INVALID_STORE_RELOC = N_("relocation invalid for store");
++static const char * INVALID_RELOC_TYPE = N_("internal relocation type invalid");
+ 
+ #define CGEN_VERBOSE_ASSEMBLER_ERRORS
+ 
+@@ -81,315 +83,187 @@ parse_disp26 (CGEN_CPU_DESC cd,
+   return cgen_parse_address (cd, strp, opindex, opinfo, resultp, valuep);
+ }
+ 
++enum
++{
++  RTYPE_LO = 0,
++  RTYPE_HI = 1,
++  RTYPE_AHI = 2,
++  RTYPE_SLO = 3,
++
++  RTYPE_GOT      = (1 << 2),
++  RTYPE_GOTPC    = (2 << 2),
++  RTYPE_GOTOFF   = (3 << 2),
++  RTYPE_TLSGD    = (4 << 2),
++  RTYPE_TLSLDM   = (5 << 2),
++  RTYPE_DTPOFF   = (6 << 2),
++  RTYPE_GOTTPOFF = (7 << 2),
++  RTYPE_TPOFF    = (8 << 2),
++};
++
++static const bfd_reloc_code_real_type or1k_imm16_relocs[][4] = {
++  { BFD_RELOC_LO16,
++    BFD_RELOC_HI16,
++    BFD_RELOC_HI16_S,
++    BFD_RELOC_OR1K_SLO16 },
++  { BFD_RELOC_OR1K_GOT16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_GOTPC_LO16,
++    BFD_RELOC_OR1K_GOTPC_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_LO16_GOTOFF,
++    BFD_RELOC_HI16_GOTOFF,
++    BFD_RELOC_HI16_S_GOTOFF,
++    BFD_RELOC_OR1K_GOTOFF_SLO16 },
++  { BFD_RELOC_OR1K_TLS_GD_LO16,
++    BFD_RELOC_OR1K_TLS_GD_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LDM_LO16,
++    BFD_RELOC_OR1K_TLS_LDM_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LDO_LO16,
++    BFD_RELOC_OR1K_TLS_LDO_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_IE_LO16,
++    BFD_RELOC_OR1K_TLS_IE_HI16,
++    BFD_RELOC_OR1K_TLS_IE_AHI16,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LE_LO16,
++    BFD_RELOC_OR1K_TLS_LE_HI16,
++    BFD_RELOC_OR1K_TLS_LE_AHI16,
++    BFD_RELOC_OR1K_TLS_LE_SLO16 }
++};
++
++static int
++parse_reloc (const char **strp)
++{
++    const char *str = *strp;
++    int ret = 0;
++
++    if (strncasecmp (str, "got(", 4) == 0)
++      {
++	*strp = str + 4;
++	return RTYPE_GOT | RTYPE_LO;
++      }
++
++    if (strncasecmp (str, "gotpc", 5) == 0)
++      {
++	str += 5;
++	ret = RTYPE_GOTPC;
++      }
++    else if (strncasecmp (str, "gotoff", 6) == 0)
++      {
++	str += 6;
++	ret = RTYPE_GOTOFF;
++      }
++    else if (strncasecmp (str, "tlsgd", 5) == 0)
++      {
++	str += 5;
++	ret = RTYPE_TLSGD;
++      }
++    else if (strncasecmp (str, "tlsldm", 6) == 0)
++      {
++	str += 6;
++	ret = RTYPE_TLSLDM;
++      }
++    else if (strncasecmp (str, "dtpoff", 6) == 0)
++      {
++	str += 6;
++	ret = RTYPE_DTPOFF;
++      }
++    else if (strncasecmp (str, "gottpoff", 8) == 0)
++      {
++	str += 8;
++	ret = RTYPE_GOTTPOFF;
++      }
++    else if (strncasecmp (str, "tpoff", 5) == 0)
++      {
++	str += 5;
++	ret = RTYPE_TPOFF;
++      }
++
++    if (strncasecmp (str, "hi(", 3) == 0)
++      {
++	str += 3;
++	ret |= RTYPE_HI;
++      }
++    else if (strncasecmp (str, "lo(", 3) == 0)
++      {
++	str += 3;
++	ret |= RTYPE_LO;
++      }
++    else if (strncasecmp (str, "ha(", 3) == 0)
++      {
++	str += 3;
++	ret |= RTYPE_AHI;
++      }
++    else
++      return -1;
++
++    *strp = str;
++    return ret;
++}
++
+ static const char *
+-parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
++parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
++	     long *valuep, int splitp)
+ {
+   const char *errmsg;
+   enum cgen_parse_operand_result result_type;
+-  long ret;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_UNUSED;
++  int reloc_type;
++  bfd_vma ret;
+ 
+   if (**strp == '#')
+     ++*strp;
+ 
+-  if (strncasecmp (*strp, "hi(", 3) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 3;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_HI16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	errmsg = MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-
+-      ret = value;
+-
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	{
+-	  ret >>= 16;
+-	  ret &= 0xffff;
+-	  ret = (ret ^ 0x8000) - 0x8000;
+-	}
+-    }
+-  else if (strncasecmp (*strp, "lo(", 3) == 0)
++  reloc_type = parse_reloc (strp);
++  if (reloc_type >= 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 3;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LO16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-
+-      ret = value;
+-
+-      if (result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
++      if (splitp)
+ 	{
+-	  ret &= 0xffff;
+-	  ret = (ret ^ 0x8000) - 0x8000;
++	  if ((reloc_type & 3) == RTYPE_LO && reloc_type != RTYPE_GOT)
++	    reloc_type |= RTYPE_SLO;
++	  else
++	    return INVALID_STORE_RELOC;
+ 	}
++      reloc = or1k_imm16_relocs[reloc_type >> 2][reloc_type & 3];
+     }
+-  else if (strncasecmp (*strp, "got(", 4) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 4;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_GOT16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gotpchi(", 8) == 0)
+-    {
+-      bfd_vma value;
+ 
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTPC_HI16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gotpclo(", 8) == 0)
++  if (reloc != BFD_RELOC_UNUSED)
+     {
+       bfd_vma value;
+ 
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTPC_LO16,
++      errmsg = cgen_parse_address (cd, strp, opindex, reloc,
+ 				   &result_type, &value);
+       if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gotoffhi(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTOFF_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gotofflo(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTOFF_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tlsgdhi(", 8) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_GD_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tlsgdlo(", 8) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_GD_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tlsldmhi(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDM_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tlsldmlo(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDM_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "dtpoffhi(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDO_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "dtpofflo(", 9) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDO_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gottpoffhi(", 11) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 11;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_IE_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gottpofflo(", 11) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 11;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_IE_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
++	errmsg = MISSING_CLOSING_PARENTHESIS;
+       ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tpoffhi(", 8) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LE_HI16,
+-				   & result_type, & value);
+ 
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tpofflo(", 8) == 0)
+-    {
+-      bfd_vma value;
++      ret = value;
+ 
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LE_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++      if (errmsg == NULL && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
++	switch (reloc_type & 3)
++	  {
++	  case RTYPE_AHI:
++	    ret += 0x8000;
++	    /* FALLTHRU */
++	  case RTYPE_HI:
++	    ret >>= 16;
++	    /* FALLTHRU */
++	  case RTYPE_LO:
++	  case RTYPE_SLO:
++	    ret &= 0xffff;
++	    ret = (ret ^ 0x8000) - 0x8000;
++	    break;
++	  default:
++	    errmsg = INVALID_RELOC_TYPE;
++	  }
+     }
+   else
+     {
+@@ -405,10 +279,33 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
+ }
+ 
+ static const char *
+-parse_uimm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, unsigned long * valuep)
++parse_simm16 (CGEN_CPU_DESC cd, const char **strp, int opindex, long *valuep)
+ {
+-  const char *errmsg = parse_simm16(cd, strp, opindex, (long *) valuep);
++  return parse_imm16(cd, strp, opindex, (long *) valuep, 0);
++}
+ 
++static const char *
++parse_simm16_split (CGEN_CPU_DESC cd, const char **strp, int opindex,
++		    long *valuep)
++{
++  return parse_imm16(cd, strp, opindex, (long *) valuep, 1);
++}
++
++static const char *
++parse_uimm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
++	      unsigned long *valuep)
++{
++  const char *errmsg = parse_imm16(cd, strp, opindex, (long *) valuep, 0);
++  if (errmsg == NULL)
++    *valuep &= 0xffff;
++  return errmsg;
++}
++
++static const char *
++parse_uimm16_split (CGEN_CPU_DESC cd, const char **strp, int opindex,
++		    unsigned long *valuep)
++{
++  const char *errmsg = parse_imm16(cd, strp, opindex, (long *) valuep, 1);
+   if (errmsg == NULL)
+     *valuep &= 0xffff;
+   return errmsg;
+diff --git a/cpu/or1korbis.cpu b/cpu/or1korbis.cpu
+index 408a135fa0..535bd28bff 100644
+--- a/cpu/or1korbis.cpu
++++ b/cpu/or1korbis.cpu
+@@ -335,7 +335,7 @@
+   (attrs (MACH ORBIS-MACHS) SIGN-OPT)
+   (type h-simm16)
+   (index f-simm16-split)
+-  (handlers (parse "simm16"))
++  (handlers (parse "simm16_split"))
+ )
+ 
+ (define-operand
+@@ -344,7 +344,7 @@
+   (attrs (MACH ORBIS-MACHS))
+   (type h-uimm16)
+   (index f-uimm16-split)
+-  (handlers (parse "uimm16"))
++  (handlers (parse "uimm16_split"))
+ )
+ 
+ ; Instructions.
+diff --git a/gas/testsuite/gas/or1k/allinsn.d b/gas/testsuite/gas/or1k/allinsn.d
+index 27884fe82d..1b36cce1bc 100644
+--- a/gas/testsuite/gas/or1k/allinsn.d
++++ b/gas/testsuite/gas/or1k/allinsn.d
+@@ -679,11 +679,14 @@ Disassembly of section \.text:
+ 00000824 <l_hi>:
+  824:	18 20 de ad 	l\.movhi r1,0xdead
+ 
+-00000828 <l_mac>:
+- 828:	c4 01 10 01 	l.mac r1,r2
+-
+-0000082c <l_maci>:
+- 82c:	4c 01 00 00 	l\.maci r1,0
+- 830:	4c 02 ff ff 	l\.maci r2,-1
+- 834:	4c 02 7f ff 	l\.maci r2,32767
+- 838:	4c 02 80 00 	l\.maci r2,-32768
++00000828 <l_ha>:
++ 828:	18 20 de ae 	l\.movhi r1,0xdeae
++
++0000082c <l_mac>:
++ 82c:	c4 01 10 01 	l.mac r1,r2
++
++00000830 <l_maci>:
++ 830:	4c 01 00 00 	l\.maci r1,0
++ 834:	4c 02 ff ff 	l\.maci r2,-1
++ 838:	4c 02 7f ff 	l\.maci r2,32767
++ 83c:	4c 02 80 00 	l\.maci r2,-32768
+diff --git a/gas/testsuite/gas/or1k/allinsn.s b/gas/testsuite/gas/or1k/allinsn.s
+index 05647f2ffd..321aea3036 100644
+--- a/gas/testsuite/gas/or1k/allinsn.s
++++ b/gas/testsuite/gas/or1k/allinsn.s
+@@ -667,6 +667,8 @@ l_lo:
+ 	l.addi	r1, r1, lo(0xdeadbeef)
+ l_hi:	
+ 	l.movhi	r1, hi(0xdeadbeef)
++l_ha:	
++	l.movhi	r1, ha(0xdeadbeef)
+ 
+ l_mac:
+ 	l.mac r1,r2
+diff --git a/gas/testsuite/gas/or1k/allinsn.exp b/gas/testsuite/gas/or1k/or1k.exp
+similarity index 83%
+rename from gas/testsuite/gas/or1k/allinsn.exp
+rename to gas/testsuite/gas/or1k/or1k.exp
+index 11eacd766e..e0e0515f42 100644
+--- a/gas/testsuite/gas/or1k/allinsn.exp
++++ b/gas/testsuite/gas/or1k/or1k.exp
+@@ -2,4 +2,5 @@
+ 
+ if [istarget or1k*-*-*] {
+         run_dump_tests [lsort [glob -nocomplain $srcdir/$subdir/*.d]]
++	run_list_test "reloc-2" ""
+ }
+diff --git a/gas/testsuite/gas/or1k/reloc-1.d b/gas/testsuite/gas/or1k/reloc-1.d
+new file mode 100644
+index 0000000000..f90a1ae269
+--- /dev/null
++++ b/gas/testsuite/gas/or1k/reloc-1.d
+@@ -0,0 +1,56 @@
++#as:
++#objdump: -r
++#name: reloc
++
++.*: +file format .*
++
++RELOCATION RECORDS FOR \[\.text\]:
++OFFSET   TYPE              VALUE 
++00000000 R_OR1K_HI_16_IN_INSN  x
++00000004 R_OR1K_HI_16_IN_INSN  x
++00000008 R_OR1K_HI_16_IN_INSN  x
++0000000c R_OR1K_HI_16_IN_INSN  x
++00000010 R_OR1K_LO_16_IN_INSN  x
++00000014 R_OR1K_LO_16_IN_INSN  x
++00000018 R_OR1K_LO_16_IN_INSN  x
++0000001c R_OR1K_LO_16_IN_INSN  x
++00000020 R_OR1K_LO_16_IN_INSN  x
++00000024 R_OR1K_LO_16_IN_INSN  x
++00000028 R_OR1K_LO_16_IN_INSN  x
++0000002c R_OR1K_LO_16_IN_INSN  x
++00000030 R_OR1K_LO_16_IN_INSN  x
++00000034 R_OR1K_LO_16_IN_INSN  x
++00000038 R_OR1K_SLO16      x
++0000003c R_OR1K_SLO16      x
++00000040 R_OR1K_SLO16      x
++00000044 R_OR1K_SLO16      x
++00000048 R_OR1K_AHI16      x
++0000004c R_OR1K_AHI16      x
++00000050 R_OR1K_AHI16      x
++00000054 R_OR1K_GOT16      x
++00000058 R_OR1K_GOT16      x
++0000005c R_OR1K_GOT16      x
++00000060 R_OR1K_GOTPC_HI16  _GLOBAL_OFFSET_TABLE_-0x00000004
++00000064 R_OR1K_GOTPC_LO16  _GLOBAL_OFFSET_TABLE_-0x00000008
++00000068 R_OR1K_GOTOFF_HI16  x
++0000006c R_OR1K_GOTOFF_LO16  x
++00000070 R_OR1K_GOTOFF_AHI16  x
++00000074 R_OR1K_GOTOFF_LO16  x
++00000078 R_OR1K_GOTOFF_SLO16  x
++0000007c R_OR1K_TLS_GD_HI16  x
++00000080 R_OR1K_TLS_GD_LO16  x
++00000084 R_OR1K_TLS_LDM_HI16  x
++00000088 R_OR1K_TLS_LDM_LO16  x
++0000008c R_OR1K_TLS_LDO_HI16  x
++00000090 R_OR1K_TLS_LDO_LO16  x
++00000094 R_OR1K_TLS_IE_HI16  x
++00000098 R_OR1K_TLS_IE_LO16  x
++0000009c R_OR1K_TLS_IE_AHI16  x
++000000a0 R_OR1K_TLS_IE_LO16  x
++000000a4 R_OR1K_TLS_LE_HI16  x
++000000a8 R_OR1K_TLS_LE_LO16  x
++000000ac R_OR1K_TLS_LE_AHI16  x
++000000b0 R_OR1K_TLS_LE_LO16  x
++000000b4 R_OR1K_TLS_LE_SLO16  x
++
++
+diff --git a/gas/testsuite/gas/or1k/reloc-1.s b/gas/testsuite/gas/or1k/reloc-1.s
+new file mode 100644
+index 0000000000..4966dc56be
+--- /dev/null
++++ b/gas/testsuite/gas/or1k/reloc-1.s
+@@ -0,0 +1,56 @@
++	l.movhi	r3,hi(x)
++	l.ori	r3,r4,hi(x)
++	l.addi	r3,r4,hi(x)
++	l.lwz	r3,hi(x)(r4)
++
++	l.movhi	r3,lo(x)
++	l.ori	r3,r4,lo(x)
++	l.addi	r3,r4,lo(x)
++	l.lwz	r3,lo(x)(r4)
++	l.lws	r3,lo(x)(r4)
++	l.lhz	r3,lo(x)(r4)
++	l.lhs	r3,lo(x)(r4)
++	l.lbz	r3,lo(x)(r4)
++	l.lbs	r3,lo(x)(r4)
++	l.lwa	r3,lo(x)(r4)
++	l.sw	lo(x)(r4),r3
++	l.sh	lo(x)(r4),r3
++	l.sb	lo(x)(r4),r3
++	l.swa	lo(x)(r4),r3
++
++	l.movhi	r3,ha(x)
++	l.ori	r3,r4,ha(x)
++	l.addi	r3,r4,ha(x)
++
++	l.ori	r3,r0,got(x)
++	l.addi	r3,r4,got(x)
++	l.lwz	r3,got(x)(r4)
++
++	l.movhi	r3,gotpchi(_GLOBAL_OFFSET_TABLE_-4)
++	l.ori	r3,r3,gotpclo(_GLOBAL_OFFSET_TABLE_-8)
++
++	l.movhi	r3,gotoffhi(x)
++	l.ori	r3,r3,gotofflo(x)
++	l.movhi	r3,gotoffha(x)
++	l.lwz	r3,gotofflo(x)(r3)
++	l.sw	gotofflo(x)(r3),r3
++
++	l.movhi	r3,tlsgdhi(x)
++	l.ori	r3,r3,tlsgdlo(x)
++
++	l.movhi	r3,tlsldmhi(x)
++	l.ori	r3,r3,tlsldmlo(x)
++
++	l.movhi	r3,dtpoffhi(x)
++	l.ori	r3,r3,dtpofflo(x)
++
++	l.movhi	r3,gottpoffhi(x)
++	l.ori	r3,r3,gottpofflo(x)
++	l.movhi	r3,gottpoffha(x)
++	l.lwz	r3,gottpofflo(x)(r3)
++
++	l.movhi	r3,tpoffhi(x)
++	l.ori	r3,r3,tpofflo(x)
++	l.movhi	r3,tpoffha(x)
++	l.lwz	r3,tpofflo(x)(r3)
++	l.sw	tpofflo(x)(r3),r3
+diff --git a/gas/testsuite/gas/or1k/reloc-2.l b/gas/testsuite/gas/or1k/reloc-2.l
+new file mode 100644
+index 0000000000..7a32a7dc14
+--- /dev/null
++++ b/gas/testsuite/gas/or1k/reloc-2.l
+@@ -0,0 +1,10 @@
++.*: Assembler messages:
++.*:2: Error: relocation invalid for store .*
++.*:3: Error: relocation invalid for store .*
++.*:4: Error: relocation invalid for store .*
++.*:6: Error: relocation invalid for store .*
++.*:7: Error: relocation invalid for store .*
++.*:8: Error: relocation invalid for store .*
++.*:9: Error: relocation invalid for store .*
++.*:11: Error: relocation invalid for store .*
++.*:12: Error: relocation invalid for store .*
+diff --git a/gas/testsuite/gas/or1k/reloc-2.s b/gas/testsuite/gas/or1k/reloc-2.s
+new file mode 100644
+index 0000000000..835dd1c84b
+--- /dev/null
++++ b/gas/testsuite/gas/or1k/reloc-2.s
+@@ -0,0 +1,12 @@
++	l.sw	lo(x)(r4),r3
++	l.sw	hi(x)(r4),r3
++	l.sw	ha(x)(r4),r3
++	l.sw	got(x)(r4),r3
++	l.sw	gotofflo(x)(r4),r3
++	l.sw	gotoffhi(x)(r4),r3
++	l.sw	gotoffha(x)(r4),r3
++	l.sw	dtpoffhi(x)(r4),r3
++	l.sw	gottpoffhi(x)(r4),r3
++	l.sw	tpofflo(x)(r4),r3
++	l.sw	tpoffhi(x)(r4),r3
++	l.sw	tpoffha(x)(r4),r3
+diff --git a/include/elf/or1k.h b/include/elf/or1k.h
+index 0c5e15bcc8..e3291d31d3 100644
+--- a/include/elf/or1k.h
++++ b/include/elf/or1k.h
+@@ -58,6 +58,13 @@ START_RELOC_NUMBERS (elf_or1k_reloc_type)
+   RELOC_NUMBER (R_OR1K_TLS_TPOFF,     32)
+   RELOC_NUMBER (R_OR1K_TLS_DTPOFF,    33)
+   RELOC_NUMBER (R_OR1K_TLS_DTPMOD,    34)
++  RELOC_NUMBER (R_OR1K_AHI16,         35)
++  RELOC_NUMBER (R_OR1K_GOTOFF_AHI16,  36)
++  RELOC_NUMBER (R_OR1K_TLS_IE_AHI16,  37)
++  RELOC_NUMBER (R_OR1K_TLS_LE_AHI16,  38)
++  RELOC_NUMBER (R_OR1K_SLO16,         39)
++  RELOC_NUMBER (R_OR1K_GOTOFF_SLO16,  40)
++  RELOC_NUMBER (R_OR1K_TLS_LE_SLO16,  41)
+ END_RELOC_NUMBERS (R_OR1K_max)
+ 
+ #define EF_OR1K_NODELAY (1UL << 0)
+diff --git a/ld/testsuite/ld-or1k/offsets1.d b/ld/testsuite/ld-or1k/offsets1.d
+new file mode 100644
+index 0000000000..aff09d4a4b
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/offsets1.d
+@@ -0,0 +1,212 @@
++#source: store1.s
++#as:
++#ld:
++#objdump: -drj.text
++#target: or1k*-*-*
++
++.*: +file format elf32-or1k
++
++
++Disassembly of section \.text:
++
++.* <_start>:
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 03 00 00 	l.sw 0\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 03 03 e8 	l.sw 1000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 03 07 d0 	l.sw 2000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 23 03 b8 	l.sw 3000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 23 07 a0 	l.sw 4000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 43 03 88 	l.sw 5000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 43 07 70 	l.sw 6000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 63 03 58 	l.sw 7000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 63 07 40 	l.sw 8000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 83 03 28 	l.sw 9000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 83 07 10 	l.sw 10000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 a3 02 f8 	l.sw 11000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 a3 06 e0 	l.sw 12000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 c3 02 c8 	l.sw 13000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 c3 06 b0 	l.sw 14000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 e3 02 98 	l.sw 15000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d4 e3 06 80 	l.sw 16000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 03 02 68 	l.sw 17000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 03 06 50 	l.sw 18000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 23 02 38 	l.sw 19000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 23 06 20 	l.sw 20000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 43 02 08 	l.sw 21000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 43 05 f0 	l.sw 22000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 63 01 d8 	l.sw 23000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 63 05 c0 	l.sw 24000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 83 01 a8 	l.sw 25000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 83 05 90 	l.sw 26000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 a3 01 78 	l.sw 27000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 a3 05 60 	l.sw 28000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 c3 01 48 	l.sw 29000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 c3 05 30 	l.sw 30000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 e3 01 18 	l.sw 31000\(r3\),r0
++.*:	18 60 00 01 	l.movhi r3,0x1
++.*:	d5 e3 05 00 	l.sw 32000\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 03 00 e8 	l.sw -32536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 03 04 d0 	l.sw -31536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 23 00 b8 	l.sw -30536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 23 04 a0 	l.sw -29536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 43 00 88 	l.sw -28536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 43 04 70 	l.sw -27536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 63 00 58 	l.sw -26536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 63 04 40 	l.sw -25536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 83 00 28 	l.sw -24536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 83 04 10 	l.sw -23536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 83 07 f8 	l.sw -22536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 a3 03 e0 	l.sw -21536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 a3 07 c8 	l.sw -20536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 c3 03 b0 	l.sw -19536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 c3 07 98 	l.sw -18536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 e3 03 80 	l.sw -17536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d6 e3 07 68 	l.sw -16536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 03 03 50 	l.sw -15536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 03 07 38 	l.sw -14536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 23 03 20 	l.sw -13536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 23 07 08 	l.sw -12536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 43 02 f0 	l.sw -11536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 43 06 d8 	l.sw -10536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 63 02 c0 	l.sw -9536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 63 06 a8 	l.sw -8536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 83 02 90 	l.sw -7536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 83 06 78 	l.sw -6536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 a3 02 60 	l.sw -5536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 a3 06 48 	l.sw -4536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 c3 02 30 	l.sw -3536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 c3 06 18 	l.sw -2536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 e3 02 00 	l.sw -1536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d7 e3 05 e8 	l.sw -536\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 03 01 d0 	l.sw 464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 03 05 b8 	l.sw 1464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 23 01 a0 	l.sw 2464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 23 05 88 	l.sw 3464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 43 01 70 	l.sw 4464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 43 05 58 	l.sw 5464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 63 01 40 	l.sw 6464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 63 05 28 	l.sw 7464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 83 01 10 	l.sw 8464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 83 04 f8 	l.sw 9464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 a3 00 e0 	l.sw 10464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 a3 04 c8 	l.sw 11464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 c3 00 b0 	l.sw 12464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 c3 04 98 	l.sw 13464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 e3 00 80 	l.sw 14464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d4 e3 04 68 	l.sw 15464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 03 00 50 	l.sw 16464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 03 04 38 	l.sw 17464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 23 00 20 	l.sw 18464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 23 04 08 	l.sw 19464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 23 07 f0 	l.sw 20464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 43 03 d8 	l.sw 21464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 43 07 c0 	l.sw 22464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 63 03 a8 	l.sw 23464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 63 07 90 	l.sw 24464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 83 03 78 	l.sw 25464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 83 07 60 	l.sw 26464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 a3 03 48 	l.sw 27464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 a3 07 30 	l.sw 28464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 c3 03 18 	l.sw 29464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 c3 07 00 	l.sw 30464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 e3 02 e8 	l.sw 31464\(r3\),r0
++.*:	18 60 00 02 	l.movhi r3,0x2
++.*:	d5 e3 06 d0 	l.sw 32464\(r3\),r0
++.*:	18 60 00 03 	l.movhi r3,0x3
++.*:	d6 03 02 b8 	l.sw -32072\(r3\),r0
+diff --git a/ld/testsuite/ld-or1k/offsets1.s b/ld/testsuite/ld-or1k/offsets1.s
+new file mode 100644
+index 0000000000..94cb06887d
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/offsets1.s
+@@ -0,0 +1,14 @@
++	.data
++	.p2align 16
++x:	.skip	10000
++
++	.text
++	.globl	_start
++_start:
++
++	.set	i, 0
++.rept 100
++	l.movhi	r3, ha(x+i)
++	l.sw	lo(x+i)(r3), r0
++	.set	i, i+1000
++.endr
+diff --git a/ld/testsuite/ld-or1k/or1k.exp b/ld/testsuite/ld-or1k/or1k.exp
+new file mode 100644
+index 0000000000..8f09a7c40e
+--- /dev/null
++++ b/ld/testsuite/ld-or1k/or1k.exp
+@@ -0,0 +1,69 @@
++# Expect script for ld-or1k tests
++#   Copyright (C) 2015 Free Software Foundation, Inc.
++#
++# This file is part of the GNU Binutils.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
++# MA 02110-1301, USA.
++#
++
++if { ![istarget "or1k*-*-*"] } {
++    return
++}
++
++# List contains test-items with 3 items followed by 2 lists:
++# 0:name 1:ld early options 2:ld late options 3:assembler options
++# 4:filenames of assembler files 5: action and options. 6: name of output file
++
++# Actions:
++# objdump: Apply objdump options on result.  Compare with regex (last arg).
++# nm: Apply nm options on result.  Compare with regex (last arg).
++# readelf: Apply readelf options on result.  Compare with regex (last arg).
++
++set or1ktests {
++    {"offsets1" "" "" "" {offsets1.s}
++     {{objdump -drj.text offsets1.d}}
++     "offsets1"}
++}
++
++# Not implemented yet
++#   {"TLS -fpic -shared" "-shared -melf64alpha" ""
++#    "" {align.s tlspic1.s tlspic2.s}
++#    {{readelf -WSsrl tlspic.rd} {objdump -drj.text tlspic.dd}
++#     {objdump -sj.got tlspic.sd} {objdump -sj.tdata tlspic.td}}
++#    "libtlspic.so"}
++#   {"Helper shared library" "-shared -melf64alpha" ""
++#    "" {tlslib.s} {} "libtlslib.so"}
++#   {"TLS -fpic and -fno-pic exec"
++#    "-melf64alpha tmpdir/libtlslib.so" "" "" {align.s tlsbinpic.s tlsbin.s}
++#    {{readelf -WSsrl tlsbin.rd} {objdump -drj.text tlsbin.dd}
++#     {objdump -sj.got tlsbin.sd} {objdump -sj.tdata tlsbin.td}}
++#    "tlsbin"}
++#   {"TLS -fpic and -fno-pic exec -relax"
++#    "-relax -melf64alpha tmpdir/libtlslib.so" ""
++#    "" {align.s tlsbinpic.s tlsbin.s}
++#    {{readelf -WSsrl tlsbinr.rd} {objdump -drj.text tlsbinr.dd}
++#     {objdump -sj.got tlsbinr.sd}}
++#    "tlsbinr"}
++#   {"empty got"
++#    "-melf64alpha" "" ""
++#    {emptygot.s}
++#    {{nm "-n" emptygot.nm}}
++#    "emptygot"}
++#   {"TLS in debug sections" "-melf64alpha" ""
++#    "" {tlsg.s}
++#    {{objdump -sj.debug_foobar tlsg.sd}} "tlsg"}
++
++run_ld_link_tests $or1ktests
+diff --git a/opcodes/or1k-asm.c b/opcodes/or1k-asm.c
+index 3162ff3b9f..751fbef398 100644
+--- a/opcodes/or1k-asm.c
++++ b/opcodes/or1k-asm.c
+@@ -52,6 +52,8 @@ static const char * parse_insn_normal
+ /* -- asm.c */
+ 
+ static const char * MISSING_CLOSING_PARENTHESIS = N_("missing `)'");
++static const char * INVALID_STORE_RELOC = N_("relocation invalid for store");
++static const char * INVALID_RELOC_TYPE = N_("internal relocation type invalid");
+ 
+ #define CGEN_VERBOSE_ASSEMBLER_ERRORS
+ 
+@@ -85,315 +87,186 @@ parse_disp26 (CGEN_CPU_DESC cd,
+   return cgen_parse_address (cd, strp, opindex, opinfo, resultp, valuep);
+ }
+ 
+-static const char *
+-parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
+-{
+-  const char *errmsg;
+-  enum cgen_parse_operand_result result_type;
+-  long ret;
+-
+-  if (**strp == '#')
+-    ++*strp;
+-
+-  if (strncasecmp (*strp, "hi(", 3) == 0)
+-    {
+-      bfd_vma value;
++enum {
++  RTYPE_LO = 0,
++  RTYPE_HI = 1,
++  RTYPE_AHI = 2,
++  RTYPE_SLO = 3,
++
++  RTYPE_GOT      = (1 << 2),
++  RTYPE_GOTPC    = (2 << 2),
++  RTYPE_GOTOFF   = (3 << 2),
++  RTYPE_TLSGD    = (4 << 2),
++  RTYPE_TLSLDM   = (5 << 2),
++  RTYPE_DTPOFF   = (6 << 2),
++  RTYPE_GOTTPOFF = (7 << 2),
++  RTYPE_TPOFF    = (8 << 2),
++};
+ 
+-      *strp += 3;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_HI16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	errmsg = MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
++static const bfd_reloc_code_real_type or1k_imm16_relocs[][4] = {
++  { BFD_RELOC_LO16,
++    BFD_RELOC_HI16,
++    BFD_RELOC_HI16_S,
++    BFD_RELOC_OR1K_SLO16 },
++  { BFD_RELOC_OR1K_GOT16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_GOTPC_LO16,
++    BFD_RELOC_OR1K_GOTPC_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_LO16_GOTOFF,
++    BFD_RELOC_HI16_GOTOFF,
++    BFD_RELOC_HI16_S_GOTOFF,
++    BFD_RELOC_OR1K_GOTOFF_SLO16 },
++  { BFD_RELOC_OR1K_TLS_GD_LO16,
++    BFD_RELOC_OR1K_TLS_GD_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LDM_LO16,
++    BFD_RELOC_OR1K_TLS_LDM_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LDO_LO16,
++    BFD_RELOC_OR1K_TLS_LDO_HI16,
++    BFD_RELOC_UNUSED,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_IE_LO16,
++    BFD_RELOC_OR1K_TLS_IE_HI16,
++    BFD_RELOC_OR1K_TLS_IE_AHI16,
++    BFD_RELOC_UNUSED },
++  { BFD_RELOC_OR1K_TLS_LE_LO16,
++    BFD_RELOC_OR1K_TLS_LE_HI16,
++    BFD_RELOC_OR1K_TLS_LE_AHI16,
++    BFD_RELOC_OR1K_TLS_LE_SLO16 }
++};
+ 
+-      ret = value;
++static int
++parse_reloc(const char **strp)
++{
++    const char *str = *strp;
++    int ret = 0;
+ 
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
++    if (strncasecmp (str, "got(", 4) == 0)
+ 	{
+-	  ret >>= 16;
+-	  ret &= 0xffff;
+-	  ret = (ret ^ 0x8000) - 0x8000;
++	*strp = str + 4;
++	return RTYPE_GOT | RTYPE_LO;
+ 	}
+-    }
+-  else if (strncasecmp (*strp, "lo(", 3) == 0)
+-    {
+-      bfd_vma value;
+-
+-      *strp += 3;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LO16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+ 
+-      ret = value;
+-
+-      if (result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
++    if (strncasecmp (str, "gotpc", 5) == 0)
+ 	{
+-	  ret &= 0xffff;
+-	  ret = (ret ^ 0x8000) - 0x8000;
++	str += 5;
++	ret = RTYPE_GOTPC;
+ 	}
+-    }
+-  else if (strncasecmp (*strp, "got(", 4) == 0)
++    else if (strncasecmp (str, "gotoff", 6) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 4;
+-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_GOT16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 6;
++	ret = RTYPE_GOTOFF;
+     }
+-  else if (strncasecmp (*strp, "gotpchi(", 8) == 0)
++    else if (strncasecmp (str, "tlsgd", 5) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTPC_HI16,
+-				   & result_type, & value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 5;
++	ret = RTYPE_TLSGD;
+     }
+-  else if (strncasecmp (*strp, "gotpclo(", 8) == 0)
++    else if (strncasecmp (str, "tlsldm", 6) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTPC_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 6;
++	ret = RTYPE_TLSLDM;
+     }
+-  else if (strncasecmp (*strp, "gotoffhi(", 9) == 0)
++    else if (strncasecmp (str, "dtpoff", 6) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTOFF_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 6;
++	ret = RTYPE_DTPOFF;
+     }
+-  else if (strncasecmp (*strp, "gotofflo(", 9) == 0)
++    else if (strncasecmp (str, "gottpoff", 8) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_GOTOFF_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 8;
++	ret = RTYPE_GOTTPOFF;
+     }
+-  else if (strncasecmp (*strp, "tlsgdhi(", 8) == 0)
++    else if (strncasecmp (str, "tpoff", 5) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_GD_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 5;
++	ret = RTYPE_TPOFF;
+     }
+-  else if (strncasecmp (*strp, "tlsgdlo(", 8) == 0)
+-    {
+-      bfd_vma value;
+ 
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_GD_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tlsldmhi(", 9) == 0)
++    if (strncasecmp (str, "hi(", 3) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDM_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 3;
++	ret |= RTYPE_HI;
+     }
+-  else if (strncasecmp (*strp, "tlsldmlo(", 9) == 0)
++    else if (strncasecmp (str, "lo(", 3) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDM_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 3;
++	ret |= RTYPE_LO;
+     }
+-  else if (strncasecmp (*strp, "dtpoffhi(", 9) == 0)
++    else if (strncasecmp (str, "ha(", 3) == 0)
+     {
+-      bfd_vma value;
+-
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDO_HI16,
+-				   & result_type, & value);
+-
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	str += 3;
++	ret |= RTYPE_AHI;
+     }
+-  else if (strncasecmp (*strp, "dtpofflo(", 9) == 0)
+-    {
+-      bfd_vma value;
++    else
++      return -1;
+ 
+-      *strp += 9;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LDO_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "gottpoffhi(", 11) == 0)
+-    {
+-      bfd_vma value;
++    *strp = str;
++    return ret;
++}
+ 
+-      *strp += 11;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_IE_HI16,
+-				   & result_type, & value);
++static const char *
++parse_imm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
++	     long *valuep, int splitp)
++{
++  const char *errmsg;
++  enum cgen_parse_operand_result result_type;
++  bfd_reloc_code_real_type reloc = BFD_RELOC_UNUSED;
++  int reloc_type;
++  bfd_vma ret;
+ 
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
++  if (**strp == '#')
+       ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
++
++  reloc_type = parse_reloc (strp);
++  if (reloc_type >= 0)
++    {
++      if (splitp)
++	{
++	  if ((reloc_type & 3) == RTYPE_LO && reloc_type != RTYPE_GOT)
++	    reloc_type |= RTYPE_SLO;
++	  else
++	    return INVALID_STORE_RELOC;
++    }
++      reloc = or1k_imm16_relocs[reloc_type >> 2][reloc_type & 3];
+     }
+-  else if (strncasecmp (*strp, "gottpofflo(", 11) == 0)
++
++  if (reloc != BFD_RELOC_UNUSED)
+     {
+       bfd_vma value;
+ 
+-      *strp += 11;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_IE_LO16,
++      errmsg = cgen_parse_address (cd, strp, opindex, reloc,
+ 				   &result_type, &value);
+       if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
++	errmsg = MISSING_CLOSING_PARENTHESIS;
+       ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tpoffhi(", 8) == 0)
+-    {
+-      bfd_vma value;
+ 
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LE_HI16,
+-				   & result_type, & value);
++      ret = value;
+ 
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value = (value >> 16) & 0xffff;
+-      *valuep = value;
+-      return errmsg;
+-    }
+-  else if (strncasecmp (*strp, "tpofflo(", 8) == 0)
++      if (errmsg == NULL && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
++	switch (reloc_type & 3)
+     {
+-      bfd_vma value;
+-
+-      *strp += 8;
+-      errmsg = cgen_parse_address (cd, strp, opindex,
+-				   BFD_RELOC_OR1K_TLS_LE_LO16,
+-				   &result_type, &value);
+-      if (**strp != ')')
+-	return MISSING_CLOSING_PARENTHESIS;
+-      ++*strp;
+-      if (errmsg == NULL
+-	  && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+-	value &= 0xffff;
+-      *valuep = value;
+-      return errmsg;
++	  case RTYPE_AHI:
++	    ret += 0x8000;
++	    /* FALLTHRU */
++	  case RTYPE_HI:
++	    ret >>= 16;
++	    /* FALLTHRU */
++	  case RTYPE_LO:
++	  case RTYPE_SLO:
++	    ret &= 0xffff;
++	    ret = (ret ^ 0x8000) - 0x8000;
++	    break;
++	  default:
++	    errmsg = INVALID_RELOC_TYPE;
++	  }
+     }
+   else
+     {
+@@ -409,10 +282,33 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
+ }
+ 
+ static const char *
+-parse_uimm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, unsigned long * valuep)
++parse_simm16 (CGEN_CPU_DESC cd, const char **strp, int opindex, long *valuep)
++{
++  return parse_imm16(cd, strp, opindex, (long *) valuep, 0);
++}
++
++static const char *
++parse_simm16_split (CGEN_CPU_DESC cd, const char **strp, int opindex,
++		    long *valuep)
+ {
+-  const char *errmsg = parse_simm16(cd, strp, opindex, (long *) valuep);
++  return parse_imm16(cd, strp, opindex, (long *) valuep, 1);
++}
+ 
++static const char *
++parse_uimm16 (CGEN_CPU_DESC cd, const char **strp, int opindex,
++	      unsigned long *valuep)
++{
++  const char *errmsg = parse_imm16(cd, strp, opindex, (long *) valuep, 0);
++  if (errmsg == NULL)
++    *valuep &= 0xffff;
++  return errmsg;
++}
++
++static const char *
++parse_uimm16_split (CGEN_CPU_DESC cd, const char **strp, int opindex,
++		    unsigned long *valuep)
++{
++  const char *errmsg = parse_imm16(cd, strp, opindex, (long *) valuep, 1);
+   if (errmsg == NULL)
+     *valuep &= 0xffff;
+   return errmsg;
+@@ -486,13 +382,13 @@ or1k_cgen_parse_operand (CGEN_CPU_DESC cd,
+       errmsg = parse_simm16 (cd, strp, OR1K_OPERAND_SIMM16, (long *) (& fields->f_simm16));
+       break;
+     case OR1K_OPERAND_SIMM16_SPLIT :
+-      errmsg = parse_simm16 (cd, strp, OR1K_OPERAND_SIMM16_SPLIT, (long *) (& fields->f_simm16_split));
++      errmsg = parse_simm16_split (cd, strp, OR1K_OPERAND_SIMM16_SPLIT, (long *) (& fields->f_simm16_split));
+       break;
+     case OR1K_OPERAND_UIMM16 :
+       errmsg = parse_uimm16 (cd, strp, OR1K_OPERAND_UIMM16, (unsigned long *) (& fields->f_uimm16));
+       break;
+     case OR1K_OPERAND_UIMM16_SPLIT :
+-      errmsg = parse_uimm16 (cd, strp, OR1K_OPERAND_UIMM16_SPLIT, (unsigned long *) (& fields->f_uimm16_split));
++      errmsg = parse_uimm16_split (cd, strp, OR1K_OPERAND_UIMM16_SPLIT, (unsigned long *) (& fields->f_uimm16_split));
+       break;
+     case OR1K_OPERAND_UIMM6 :
+       errmsg = cgen_parse_unsigned_integer (cd, strp, OR1K_OPERAND_UIMM6, (unsigned long *) (& fields->f_uimm6));
+-- 
+2.18.1
+
