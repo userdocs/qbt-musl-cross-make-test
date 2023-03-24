@@ -55,7 +55,6 @@ clean:
 distclean: clean
 	rm -rf sources
 
-
 # Rules for downloading and verifying sources. Treat an external SOURCES path as
 # immutable and do not try to download anything into it.
 
@@ -153,12 +152,10 @@ musl-riscv-%:
 	mv $@.tmp $@
 	$(COWPATCH) -S gcc-$(GCC_VER)/libstdc++-v3
 
-
 # Add deps for all patched source dirs on their patchsets
 $(foreach dir,$(notdir $(basename $(basename $(basename $(wildcard hashes/*))))),$(eval $(dir): $$(wildcard patches/$(dir) patches/$(dir)/*)))
 
 extract_all: | $(SRC_DIRS)
-
 
 # Rules for building.
 
