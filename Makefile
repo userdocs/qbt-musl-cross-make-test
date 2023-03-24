@@ -9,7 +9,7 @@ MPC_VER = 1.1.0
 MPFR_VER = 4.0.2
 LINUX_VER = headers-4.19.88
 
-GNU_SITE = https://ftp.gnu.org/gnu
+GNU_SITE = https://mirrors.dotsrc.org/gnu
 GCC_SITE = $(GNU_SITE)/gcc
 BINUTILS_SITE = $(GNU_SITE)/binutils
 GMP_SITE = $(GNU_SITE)/gmp
