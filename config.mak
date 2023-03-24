@@ -14,7 +14,7 @@ GCC_CONFIG += --enable-default-pie --enable-static-pie --disable-cet
 
 CONFIG_SUB_REV = 888c8e3d5f7b
 GCC_VER = 12.2.0
-BINUTILS_VER = 2.38
+BINUTILS_VER = 2.40
 MUSL_VER = git-7d756e1c04de6eb3f2b3d3e1141a218bb329fcfb
 GMP_VER = 6.2.1
 MPC_VER = 1.3.1
