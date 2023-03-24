@@ -82,7 +82,7 @@ jobs:
       - name: Docker - Copy updated config.mak to build directory
         run: |
           docker exec -w /root multiarch cp -f config.mak musl-cross-make-master/config.mak
-          docker exec -w /root multiarch cp -rf custom/hashes/. musl-cross-make-master/hashes/
+          docker exec -w /root multiarch cp -rf custom/. musl-cross-make-master/
 
       - name: Docker - install ${{ matrix.arch_type }} toolchain
         run: docker exec -w /root/musl-cross-make-master multiarch make -j"$(nproc)" install TARGET=${{ matrix.arch_type }} OUTPUT=/root/build/${{ matrix.arch_type }}
