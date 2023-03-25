@@ -67,7 +67,10 @@ jobs:
           path: musl-cross-make-artifact-archive
 
       - name: Unpack musl-cross-make-master artifact
-        run: tar -xf musl-cross-make-artifact-archive/musl-cross-make-master.tar.gz --strip-components 1 -C /root
+        run: |
+          ls -la
+          tar -xf musl-cross-make-artifact-archive/musl-cross-make-master.tar.gz --strip-components 1 -C /root
+          ls -la
 
       - name: apk install build deps
         run: >
