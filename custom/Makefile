@@ -15,9 +15,7 @@ BINUTILS_SITE = $(GNU_SITE)/binutils
 GMP_SITE = $(GNU_SITE)/gmp
 MPC_SITE = $(GNU_SITE)/mpc
 MPFR_SITE = $(GNU_SITE)/mpfr
-
 GCC_SNAP = https://sourceware.org/pub/gcc/snapshots
-
 ISL_SITE = https://downloads.sourceforge.net/project/libisl/
 
 MUSL_SITE = https://musl.libc.org/releases
