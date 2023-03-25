@@ -67,7 +67,7 @@ jobs:
           path: musl-cross-make-artifact-archive
 
       - name: Unpack musl-cross-make-master artifact
-        run: tar -xf musl-cross-make-artifact-archive/musl-cross-make-master.tar.gz -C /root
+        run: tar -xf musl-cross-make-artifact-archive/musl-cross-make-master.tar.gz --strip-components 1 -C /root
 
       - name: apk install build deps
         run: >
@@ -79,14 +79,14 @@ jobs:
         run: sed "s|COMMON_CONFIG += --disable-gprofng|COMMON_CONFIG += ${{ matrix.arch_config }} --disable-gprofng|" -i custom/config.mak
 
       - name: Copy updated config.mak to build directory
-        run: cp -rf custom/. musl-cross-make-master/
+        run: cp -rf custom/. /root
 
       - name: install ${{ matrix.arch_type }} toolchain
         run: make -j"$(nproc)" install TARGET=${{ matrix.arch_type }} OUTPUT=build/${{ matrix.arch_type }}
 
       - name: archive ${{ matrix.arch_type }} toolchain
         run: |
-          cd mcm_build
+          cd build
           XZ_OPT="-9" tar -cvJf ${{ matrix.arch_type }}.tar.xz ${{ matrix.arch_type }}/
 
       - name: set tag via date
