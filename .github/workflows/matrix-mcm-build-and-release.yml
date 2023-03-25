@@ -82,7 +82,7 @@ jobs:
         run: cp -rf custom/. "$PWD"
 
       - name: install ${{ matrix.arch_type }} toolchain
-        run: make -j"$(nproc)" install TARGET=${{ matrix.arch_type }} OUTPUT=build/${{ matrix.arch_type }}
+        run: make -j"$(nproc)" install TARGET="${{ matrix.arch_type }}"" OUTPUT="$(pwd)/build/${{ matrix.arch_type }}""
 
       - name: archive ${{ matrix.arch_type }} toolchain
         run: |
