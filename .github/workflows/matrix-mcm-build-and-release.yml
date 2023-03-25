@@ -82,11 +82,11 @@ jobs:
         run: cp -rf custom/. "$PWD"
 
       - name: install ${{ matrix.arch_type }} toolchain
-        run: make -j"$(nproc)" install TARGET="${{ matrix.arch_type }}"" OUTPUT="$(pwd)/build/${{ matrix.arch_type }}""
+        run: make -j"$(nproc)" install TARGET="${{ matrix.arch_type }}" OUTPUT="$(pwd)/build/${{ matrix.arch_type }}"
 
       - name: archive ${{ matrix.arch_type }} toolchain
         run: |
-          cd build
+          cd "$(pwd)/build"
           XZ_OPT="-9" tar -cvJf ${{ matrix.arch_type }}.tar.xz ${{ matrix.arch_type }}/
 
       - name: set tag via date
