@@ -1,5 +1,5 @@
 STAT = -static --static
-FLAG = -g0 -O2 -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels -Wno-error
+FLAG = -s -O2 -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels -Wno-error
 
 ifneq ($(NATIVE),)
 COMMON_CONFIG += CC="$(HOST)-gcc ${STAT}" CXX="$(HOST)-g++ ${STAT}" FC="$(HOST)-gfortran ${STAT}"
