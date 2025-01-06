@@ -92,13 +92,13 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "build/${matrix_arch_type}.tar.xz"
+          subject-path: "build/${{ env.matrix_arch_type }}.tar.xz"
 
       - name: Docker - upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "qbt-musl-cross-make-${matrix_arch_type}"
-          path: "build/${matrix_arch_type}.tar.xz"
+          name: "qbt-musl-cross-make-${{ env.matrix_arch_type }}"
+          path: "build/${{ env.matrix_arch_type }}.tar.xz"
 
   release:
     name: Upload artifacts to release
