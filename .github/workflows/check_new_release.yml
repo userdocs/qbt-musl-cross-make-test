@@ -17,7 +17,7 @@ on:
 
 jobs:
   skip_duplicate_job:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: write
       contents: read
@@ -35,7 +35,7 @@ jobs:
   check_release:
     needs: skip_duplicate_job
     if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
