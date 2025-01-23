@@ -69,6 +69,7 @@ jobs:
         run: |
           docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${matrix_arch_prefix}/alpine:edge
           docker exec mcm adduser -h /home/github -Ds /bin/bash -u 1001 github
+          docker exec mcm apk add sudo
           docker exec mcm sh -c 'printf "%s" "github ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/github'
 
       - name: Docker - apk update
