@@ -38,8 +38,6 @@ jobs:
       id-token: write
       contents: read
       attestations: write
-    container:
-      image: alpine:edge
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
