@@ -200,7 +200,7 @@ jobs:
           build-args: |
             ARCH=arm64v8
             TARGET=${{ matrix.arch_type }}
-            BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
+            BASE_URL=https://github.com/userdocs/qbt-musl-cross-make-test/releases/latest/download
 
       - name: Attest
         uses: actions/attest-build-provenance@v2
