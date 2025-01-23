@@ -198,7 +198,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            ARCH: arm64v8
+            ARCH=arm64v8
             TARGET=${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
 
