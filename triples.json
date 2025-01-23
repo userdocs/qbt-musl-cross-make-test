@@ -3,6 +3,24 @@
             "ubuntu-24.04",
             "ubuntu-24.04-arm"
           ],
+          "arch_type": [
+            "aarch64-linux-musl",
+            "arm-linux-musleabi",
+            "arm-linux-musleabihf",
+            "armv6-linux-musleabihf",
+            "armv7l-linux-musleabihf",
+            "i686-linux-musl",
+            "x86_64-linux-musl",
+            "mips-linux-musl",
+            "mipsel-linux-musl",
+            "mips64-linux-musl",
+            "mips64el-linux-musl",
+            "powerpc-linux-musl",
+            "powerpc64le-linux-musl",
+            "s390x-linux-musl",
+            "riscv64-linux-musl",
+            "loongarch64-linux-musl"
+          ],
           "include": [
             {
               "build_host": "ubuntu-24.04",

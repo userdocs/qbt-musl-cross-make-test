@@ -45,7 +45,7 @@ jobs:
       matrix_arch_type: ${{ matrix.arch_type }}
       matrix_arch_prefix: ${{ matrix.arch_prefix }}
 
-    name: build ${{ matrix.arch_type }}
+    name: build ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
 
     steps:
       - name: Checkout
