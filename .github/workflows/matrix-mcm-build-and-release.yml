@@ -65,7 +65,7 @@ jobs:
         run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
       - name: Host - Create docker multiarch container
-        run: docker run --name mcm -it -d -w /root -v ${{ github.workspace }}:/root alpine:edge
+        run: docker run --name mcm -it -d -w /root -v ${{ github.workspace }}:/root arm64v8/alpine:edge
 
       - name: Docker - apk update
         run: docker exec -w /root mcm apk update
