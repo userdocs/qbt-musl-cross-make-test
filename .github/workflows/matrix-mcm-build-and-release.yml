@@ -65,13 +65,16 @@ jobs:
         run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
       - name: Host - Create docker multiarch container
-        run: docker run --name mcm -it -d -w /root -v ${{ github.workspace }}:/root arm64v8/alpine:edge
+        run: docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github arm64v8/alpine:edge
 
       - name: Docker - apk update
-        run: docker exec -w /root mcm apk update
+        run: docker exec mcm adduser -h /home/github -Ds /bin/bash -u 1001 github
+
+      - name: Docker - apk update
+        run: docker exec mcm apk update
 
       - name: Docker - apk install bash
-        run: docker exec -w /root mcm apk add -u --no-cache autoconf automake bash bison build-base curl findutils flex git libarchive-tools libtool linux-headers patch perl pkgconf rsync tar texinfo xz zip
+        run: docker exec mcm apk add -u --no-cache autoconf automake bash bison build-base curl findutils flex git libarchive-tools libtool linux-headers patch perl pkgconf rsync tar texinfo xz zip
 
       - name: Host - Set ${{ matrix.arch_type }} musl to ${{ matrix.arch_config }}
         env:
@@ -86,7 +89,7 @@ jobs:
         run: cat config.mak
 
       - name: Docker - install ${{ matrix.arch_type }} toolchain
-        run: docker exec -w /root mcm make -j"$(nproc)" install TARGET="${matrix_arch_type}" OUTPUT="$(pwd)/build/${matrix_arch_type}"
+        run: docker exec -u github:github mcm make -j"$(nproc)" install TARGET="${matrix_arch_type}" OUTPUT="$(pwd)/build/${matrix_arch_type}"
 
       - name: Host - archive ${{ matrix.arch_type }} toolchain
         run: |
