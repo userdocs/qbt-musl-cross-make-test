@@ -32,7 +32,7 @@ jobs:
         run: echo "matrix_includes=$(jq -c . triples.json)" >> $GITHUB_OUTPUT
 
   build:
-    if: inputs.docker_only == 'false'
+    if: github.event.inputs.docker_only == 'false'
     needs: bootstrap-matrix
     runs-on: ${{ matrix.build_host }}
     permissions:
@@ -114,7 +114,7 @@ jobs:
     name: Upload artifacts to release
     runs-on: ubuntu-24.04-arm
     needs: [bootstrap-matrix, build]
-    if: always() && contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && inputs.docker_only == 'false'
+    if: always() && contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && github.event.inputs.docker_only == 'false'
     permissions:
       contents: write
     env:
