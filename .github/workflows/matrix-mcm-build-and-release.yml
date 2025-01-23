@@ -10,9 +10,10 @@ on:
         type: boolean
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   GH_TOKEN: "${{ github.TOKEN }}"
+  REGISTRY_IMAGE_GHCR: ghcr.io/${{ github.repository }}
+  REGISTRY_IMAGE_DOCKERHUB: ${{ github.repository }}
+  SET_IMAGE_TAG: latest
 
 jobs:
   bootstrap-matrix:
@@ -150,14 +151,7 @@ jobs:
           allowUpdates: true
 
   docker-publish:
-    if: always() && contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
-    needs: [bootstrap-matrix, build, release]
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      id-token: write
-      packages: write
-      contents: read
-      attestations: write
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
@@ -165,47 +159,123 @@ jobs:
     name: docker ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
 
     steps:
-      - name: Checkout
+      # Checkout the code
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      - name: Extract metadata (tags, labels) for Docker
+      # Generate Docker metadata
+      - name: Docker meta
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          images: |
+            ${{ env.REGISTRY_IMAGE_GHCR }}
+            ${{ env.REGISTRY_IMAGE_DOCKERHUB }}
 
+      # Set up QEMU for multiarch builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          cache-binary: false
 
-      - name: Log in to the Container registry
+      # Cache Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.arch_prefix }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.arch_prefix }}-
+
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and push Docker image
-        id: push
+      # Build and push Docker images
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/${{ matrix.arch_prefix }}
           context: .
-          file: Dockerfile
+          platforms: linux/${{ matrix.arch_type }}
           push: true
-          no-cache: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
+          tags: ${{ env.REGISTRY_IMAGE_GHCR }}:${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
           build-args: |
             TARGET=${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make-test/releases/latest/download
+
+      # Export digest
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      # Upload digest
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-linux-${{ matrix.arch_prefix }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Attest
         uses: actions/attest-build-provenance@v2
         id: attest
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-name: ${{ env.REGISTRY_IMAGE_GHCR }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  docker-merge:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Download digests
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Generate Docker metadata
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE_GHCR }}
+
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
+      - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
+        working-directory: /tmp/digests
+        run: |
+          ghcr_digests=$(for digest in *; do printf '${{ env.REGISTRY_IMAGE_GHCR }}@sha256:%s ' "$digest"; done)
+          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE_GHCR }}:${{ env.SET_IMAGE_TAG }} $ghcr_digests
+
+      # Inspect images
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE_GHCR }}:${{ env.SET_IMAGE_TAG }}
