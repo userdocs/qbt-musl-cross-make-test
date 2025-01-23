@@ -210,7 +210,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/${{ matrix.arch_type }}
+          platforms: linux/${{ matrix.arch_prefix }}
           push: true
           tags: ${{ env.REGISTRY_IMAGE_GHCR }}:${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
