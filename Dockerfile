@@ -1,7 +1,3 @@
-ARG TARGET
-ARG BASE_URL
-ARG ARCH
-
 FROM arm64v8/alpine:edge
 
 ENV CHOST=${TARGET}
