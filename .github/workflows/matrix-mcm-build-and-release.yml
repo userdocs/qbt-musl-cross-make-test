@@ -162,7 +162,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
 
-    name: docker ${{ matrix.arch_type }}
+    name: docker ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
 
     steps:
       - name: Checkout
@@ -191,7 +191,7 @@ jobs:
         id: push
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.arch_prefix == 'amd64' && 'linux/amd64' || 'linux/arm64' }}
           context: .
           file: Dockerfile
           push: true
