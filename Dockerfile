@@ -2,7 +2,7 @@ ARG TARGET
 ARG BASE_URL
 ARG ARCH
 
-FROM ${ARCH}/alpine:edge
+FROM arm64v8/alpine:edge
 
 ENV CHOST=${TARGET}
 ENV CC=${TARGET}-gcc
