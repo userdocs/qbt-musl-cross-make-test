@@ -46,9 +46,10 @@ jobs:
       matrix_alpine_prefix: ${{ matrix.alpine_prefix }}
       matrix_arch_type: ${{ matrix.arch_type }}
       matrix_arch_config: ${{ matrix.arch_config }}
+      matrix_triple_prefix: ${{ matrix.triple_prefix }}
       matrix_arch_prefix: ${{ matrix.arch_prefix }}
 
-    name: build ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
+    name: build ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
       - name: Checkout
@@ -96,18 +97,18 @@ jobs:
       - name: Host - archive ${{ matrix.arch_type }} toolchain
         run: |
           cd "$(pwd)/build"
-          XZ_OPT=-9T0 tar -cvJf ${matrix_arch_prefix}-${matrix_arch_type}.tar.xz ${matrix_arch_type}/
+          XZ_OPT=-9T0 tar -cvJf ${matrix_triple_prefix}-${matrix_arch_type}.tar.xz ${matrix_arch_type}/
 
       - name: Host - Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "build/${{ matrix.arch_prefix }}-${{ matrix.arch_type }}.tar.xz"
+          subject-path: "build/${{ matrix.triple_prefix }}-${{ matrix.arch_type }}.tar.xz"
 
       - name: Host - Docker - upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "qbt-mcm-${{ matrix.arch_prefix }}-${{ matrix.arch_type }}"
-          path: "build/${{ matrix.arch_prefix }}-${{ matrix.arch_type }}.tar.xz"
+          name: "qbt-mcm-${{ matrix.triple_prefix }}-${{ matrix.arch_type }}"
+          path: "build/${{ matrix.triple_prefix }}-${{ matrix.arch_type }}.tar.xz"
 
   release:
     name: Upload artifacts to release
@@ -163,7 +164,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
 
-    name: docker ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
+    name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
       # Checkout the code
@@ -192,9 +193,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.arch_prefix }}-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ matrix.triple_prefix }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.arch_prefix }}-
+            ${{ runner.os }}-buildx-${{ matrix.triple_prefix }}-
 
       # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
@@ -217,7 +218,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           build-args: |
-            TARGET=${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
+            TARGET=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make-test/releases/latest/download
 
       # Export digest
@@ -231,7 +232,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-linux-${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
+          name: digests-linux-${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
