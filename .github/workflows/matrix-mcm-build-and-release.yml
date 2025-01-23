@@ -68,6 +68,7 @@ jobs:
         run: |
           docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github arm64v8/alpine:edge
           docker exec mcm adduser -h /home/github -Ds /bin/bash -u 1001 github
+          docker exec mcm sh -c 'printf "%s" "github ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/github'
 
       - name: Docker - apk update
         run: docker exec mcm apk update
