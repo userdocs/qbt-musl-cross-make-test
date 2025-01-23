@@ -65,8 +65,10 @@ jobs:
         run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
       - name: Host - Create docker multiarch container
+        env:
+          matrix_arch_prefix: ${{ matrix.arch_prefix }}
         run: |
-          docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${{ matrix.arch_prefix }}/alpine:edge
+          docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${matrix_arch_prefix}/alpine:edge
           docker exec mcm adduser -h /home/github -Ds /bin/bash -u 1001 github
           docker exec mcm sh -c 'printf "%s" "github ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/github'
 
