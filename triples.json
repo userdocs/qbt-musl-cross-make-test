@@ -24,11 +24,13 @@
           "include": [
             {
               "build_host": "ubuntu-24.04",
+              "alpine_prefix": "amd64",
               "arch_prefix": "amd64"
             },
             {
               "build_host": "ubuntu-24.04-arm",
-              "arch_prefix": "arm64v8"
+              "alpine_prefix": "arm64v8",
+              "arch_prefix": "arm64"
             },
             {
               "arch_type": "aarch64-linux-musl",

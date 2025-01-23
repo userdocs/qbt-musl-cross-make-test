@@ -42,7 +42,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
     env:
+      matrix_alpine_prefix: ${{ matrix.alpine_prefix }}
       matrix_arch_type: ${{ matrix.arch_type }}
+      matrix_arch_config: ${{ matrix.arch_config }}
       matrix_arch_prefix: ${{ matrix.arch_prefix }}
 
     name: build ${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
@@ -67,7 +69,7 @@ jobs:
 
       - name: Host - Create docker multiarch container
         run: |
-          docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${matrix_arch_prefix}/alpine:edge
+          docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${matrix_alpine_prefix}/alpine:edge
           docker exec mcm sh -c 'adduser -h /home/github -Ds /bin/bash -u 1001 github && apk add sudo'
           docker exec mcm sh -c 'printf "%s" "github ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/github'
 
@@ -78,8 +80,6 @@ jobs:
         run: docker exec mcm apk add -u --no-cache autoconf automake bash bison build-base curl findutils flex git libarchive-tools libtool linux-headers patch perl pkgconf rsync tar texinfo xz zip
 
       - name: Host - Set ${{ matrix.arch_type }} musl to ${{ matrix.arch_config }}
-        env:
-          matrix_arch_config: ${{ matrix.arch_config }}
         run: sed "s|GCC_CONFIG_FOR_TARGET +=|GCC_CONFIG_FOR_TARGET += ${matrix_arch_config}|" -i config.mak
 
       - name: Host - Disable binutils gold for loongarch64
@@ -191,12 +191,12 @@ jobs:
         id: push
         uses: docker/build-push-action@v6
         with:
-          platforms: ${{ matrix.arch_prefix == 'amd64' && 'linux/amd64' || 'linux/arm64' }}
+          platforms: linux/${{ matrix.arch_prefix }}
           context: .
           file: Dockerfile
           push: true
           no-cache: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.arch_type }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             TARGET=${{ matrix.arch_prefix }}-${{ matrix.arch_type }}
