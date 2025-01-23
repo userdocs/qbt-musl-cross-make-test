@@ -170,6 +170,8 @@ jobs:
       # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Generate Docker metadata
       - name: Docker meta
@@ -187,15 +189,8 @@ jobs:
       # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      # Cache Docker layers
-      - name: Cache Docker layers
-        uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.triple_prefix }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.triple_prefix }}-
+          cache-binary: false
 
       # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
@@ -215,17 +210,18 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY_IMAGE_GHCR }}:${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          no-cache: true
           build-args: |
             TARGET=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make-test/releases/latest/download
 
       # Export digest
       - name: Export digest
+        env:
+          digest: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
+          digest="${digest}"
           touch "/tmp/digests/${digest#sha256:}"
 
       # Upload digest
@@ -282,12 +278,16 @@ jobs:
 
       # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
       - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
+        env:
+          registry: ${{ env.REGISTRY_IMAGE_GHCR }}
         working-directory: /tmp/digests
         run: |
-          ghcr_digests=$(for digest in *; do printf '${{ env.REGISTRY_IMAGE_GHCR }}@sha256:%s ' "$digest"; done)
-          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE_GHCR }}:${{ env.SET_IMAGE_TAG }} $ghcr_digests
+          ghcr_digests=$(for digest in *; do printf '${registry}@sha256:%s ' "$digest"; done)
+          docker buildx imagetools create -t ${registry}:${{ env.SET_IMAGE_TAG }} $ghcr_digests
 
       # Inspect images
       - name: Inspect image
+        env:
+          registry: ${{ env.REGISTRY_IMAGE_GHCR }}
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE_GHCR }}:${{ env.SET_IMAGE_TAG }}
+          docker buildx imagetools inspect ${registry}:${{ env.SET_IMAGE_TAG }}
