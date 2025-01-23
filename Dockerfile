@@ -1,7 +1,8 @@
-FROM alpine:edge
-
 ARG TARGET
 ARG BASE_URL
+ARG ARCH
+
+FROM ${ARCH}/alpine:edge
 
 ENV CHOST=${TARGET}
 ENV CC=${TARGET}-gcc
