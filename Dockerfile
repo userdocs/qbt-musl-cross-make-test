@@ -5,6 +5,10 @@ ENV CC=${TARGET}-gcc
 ENV CXX=${TARGET}-g++
 ENV AR=${TARGET}-ar
 
+RUN echo "ARCH:${ARCH}"
+RUN echo "TARGET:${TARGET}"
+RUN echo "BASE_URL ${BASE_URL}"
+
 RUN apk add -u --no-cache autoconf automake bash cmake coreutils curl file fortify-headers git gpg patch pkgconf libtool make perl linux-headers ttf-freefont graphviz re2c xz ninja-build ninja-is-really-ninja sudo \
 	&& curl -Lo- "${BASE_URL}/${TARGET}.tar.xz" | tar xJf - --strip-components=1 -C /usr/local \
 	&& cd /usr/local/bin \
