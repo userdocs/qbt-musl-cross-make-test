@@ -47,7 +47,7 @@ jobs:
       matrix_arch_type: ${{ matrix.arch_type }}
       matrix_arch_config: ${{ matrix.arch_config }}
       matrix_triple_prefix: ${{ matrix.triple_prefix }}
-      matrix_arch_prefix: ${{ matrix.arch_prefix }}
+      matrix_docker_platform: ${{ matrix.docker_platform }}
 
     name: build ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
@@ -206,7 +206,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/${{ matrix.arch_prefix }}
+          platforms: linux/${{ matrix.docker_platform }}
           push: true
           tags: ${{ env.REGISTRY_IMAGE_GHCR }}:${{ matrix.arch_type }}
           labels: ${{ steps.meta.outputs.labels }}
