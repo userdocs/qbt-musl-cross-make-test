@@ -26,7 +26,8 @@ jobs:
     permissions:
       contents: read
     outputs:
-      matrix_includes: ${{ steps.triples.outputs.matrix_includes }}
+      docker_publish: ${{ steps.triples.outputs.docker_publish }}
+      docker_test: ${{ steps.triples.outputs.docker_test }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +35,9 @@ jobs:
 
       - name: bootstrap the matrix
         id: triples
-        run: echo "matrix_includes={"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
+        run: |
+          echo "docker_publish={"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
+          echo "docker_test={"build_host":["ubuntu-24.04","ubuntu-24.04-arm"],"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
 
   docker-publish:
     needs: [bootstrap-matrix]
@@ -46,7 +49,7 @@ jobs:
       attestations: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
+      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_publish) }}
 
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
@@ -98,7 +101,7 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
+      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test) }}
 
     steps:
       - name: file gcc
@@ -108,7 +111,7 @@ jobs:
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
-    needs: [docker-publish]
+    needs: [docker-publish, docker-test]
     concurrency:
       group: ci-auto-rerun-failed-jobs
       cancel-in-progress: true
