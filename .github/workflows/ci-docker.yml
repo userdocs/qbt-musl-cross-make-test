@@ -51,6 +51,12 @@ jobs:
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
+      # - name: Host - update
+      #   run: sudo apt-get update
+
+      # - name: Host - set up qemu-user-static binfmt-support
+      #   run: sudo apt install libpipeline1 qemu-user-static binfmt-support
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -139,40 +145,46 @@ jobs:
           pattern: digests-*
           merge-multiple: true
 
-      - run: ls -la /tmp/digests
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          cache-binary: false
 
-  #     # Set up Docker Buildx
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
-  #       with:
-  #         cache-binary: false
+      # Generate Docker metadata
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE_GHCR }}
 
-  #     # Generate Docker metadata
-  #     - name: Docker meta
-  #       id: meta
-  #       uses: docker/metadata-action@v5
-  #       with:
-  #         images: ${{ env.REGISTRY_IMAGE_GHCR }}
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
-  #     # Login to GitHub Container Registry
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.actor }}
-  #         password: ${{ github.token }}
+      # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
+      - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
+        working-directory: /tmp/digests
+        run: |
+          ghcr_digests=()
 
-  #     # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
-  #     - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
-  #       working-directory: /tmp/digests
-  #       run: |
-  #         ghcr_digests=$(for digest in *; do printf '%s@sha256:%s ' "${registry}" "$digest"; done)
-  #         docker buildx imagetools create -t ${registry} $ghcr_digests
-
-  #     # Inspect images
-  #     - name: Inspect image
-  #       run: |
-  #         docker buildx imagetools inspect ${registry}/${{ matrix.arch_type }}:${{ env.SET_IMAGE_TAG }}
+          for files in tmp/*; do
+            filename="$(basename "$files")"
+            triple="${filename%_*}"
+            if [[ "${triple}" =~ ^x86_64- ]]; then
+              triple="${triple#x86_64-}"
+            elif [[ "${triple}" =~ ^aarch64- ]]; then
+              triple="${triple#aarch64-}"
+            fi
+            sha="${filename##*_}"
+            # ghcr_digests+=("${registry}@sha256:${sha}")
+            docker buildx imagetools create -t "${registry}:${triple}" "${registry}@sha256:${sha}"
+            docker buildx imagetools inspect "${registry}:${triple}"
+          done
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
