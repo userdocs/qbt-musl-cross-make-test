@@ -34,7 +34,7 @@ jobs:
 
       - name: bootstrap the matrix
         id: triples
-        run: echo "matrix_includes=$(jq -c . triples.json)" >> $GITHUB_OUTPUT
+        run: echo "matrix_includes=$(jq -c .arch_type triples.json)" >> $GITHUB_OUTPUT
 
   docker-publish:
     needs: [bootstrap-matrix]
@@ -46,26 +46,7 @@ jobs:
       attestations: write
     strategy:
       fail-fast: false
-      matrix:
-        arch_type:
-          [
-            "aarch64-linux-musl",
-            "arm-linux-musleabi",
-            "arm-linux-musleabihf",
-            "armv6-linux-musleabihf",
-            "armv7l-linux-musleabihf",
-            "i686-linux-musl",
-            "x86_64-linux-musl",
-            "mips-linux-musl",
-            "mipsel-linux-musl",
-            "mips64-linux-musl",
-            "mips64el-linux-musl",
-            "powerpc-linux-musl",
-            "powerpc64le-linux-musl",
-            "s390x-linux-musl",
-            "riscv64-linux-musl",
-            "loongarch64-linux-musl",
-          ]
+      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
 
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
@@ -108,6 +89,19 @@ jobs:
           build-args: |
             ARCH=${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
+
+  docker-test:
+    runs-on: ${{ matrix.runs-on }}
+    container: ghcr.io/userdocs/qbt-musl-cross-make:${{ matrix.arch_type }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
+
+    steps:
+      - name: file gcc
+        run: file /usr/local/bin/${{ matrix.arch_type }}-gcc
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
