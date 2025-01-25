@@ -90,7 +90,7 @@ jobs:
           platforms: linux/${{ matrix.docker_platform }}
           labels: ${{ steps.meta.outputs.labels }}
           #tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
-          outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ env.GHCR_REPO }}:${{ matrix.arch_type }}",push-by-digest=true,name-canonical=true,push=true
           no-cache: true
           build-args: |
             TARGET=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
@@ -105,7 +105,7 @@ jobs:
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${digest}"
-          touch "${{ runner.temp }}/digests/${triple_prefix}-${arch_type}_${digest#sha256:}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
