@@ -36,8 +36,8 @@ jobs:
       - name: bootstrap the matrix
         id: triples
         run: |
-          echo "docker_publish={"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
-          echo "docker_test={"build_host":["ubuntu-24.04","ubuntu-24.04-arm"],"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
+          echo "docker_publish={\"arch_type\":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
+          echo "docker_test={\"build_host\":$(jq -c .build_host triples.json),\"arch_type\":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
 
   docker-publish:
     needs: [bootstrap-matrix]
