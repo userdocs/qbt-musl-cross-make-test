@@ -155,6 +155,18 @@ jobs:
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
 
+          # Create hashes directory if it doesn't exist
+          mkdir -p hashes
+
+          # Only run git commands if there are actual changes
+          if [[ -f "versions.json" ]] && [[ -f "versions.mak" ]] && [[ -d "hashes" ]]; then
+            git add versions.json versions.mak hashes/*.sha1 || true
+            git status --porcelain | grep -q . && {
+              echo "Changes detected, setting trigger_workflow=yes"
+              echo "trigger_workflow=yes" >> $GITHUB_ENV
+            } || echo "No changes detected"
+          fi
+
       - name: Commit and Push
         run: |
           git add versions.json versions.mak hashes/*.sha1
