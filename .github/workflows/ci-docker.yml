@@ -16,9 +16,8 @@ on:
         options: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 env:
-  REGISTRY_IMAGE_GHCR: ghcr.io/${{ github.repository }}
-  REGISTRY_IMAGE_DOCKERHUB: ${{ github.repository }}
-  SET_IMAGE_TAG: latest
+  GHCR_REPO: ghcr.io/${{ github.repository }}
+  DOCKERHUB_REPO: ${{ github.repository }}
 
 jobs:
   bootstrap-matrix:
@@ -57,39 +56,29 @@ jobs:
       # - name: Host - set up qemu-user-static binfmt-support
       #   run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      # Generate Docker metadata
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY_IMAGE_GHCR }}
-            ${{ env.REGISTRY_IMAGE_DOCKERHUB }}
+            ${{ env.GHCR_REPO }}
+            ${{ env.DOCKERHUB_REPO }}
 
-      # Set up QEMU for multiarch builds
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           cache-binary: false
 
-      # Login to GitHub Container Registry
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      # Build and push Docker images
       - name: Build and push by digest
         env:
           DOCKER_BUILD_SUMMARY: "false"
@@ -97,10 +86,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/${{ matrix.docker_platform }}
           push: true
-          tags: ${{ env.REGISTRY_IMAGE_GHCR }}:${{ matrix.arch_type }}
+          platforms: linux/${{ matrix.docker_platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
+          outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
           no-cache: true
           build-args: |
             TARGET=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
@@ -113,22 +103,21 @@ jobs:
           triple_prefix: ${{ matrix.triple_prefix }}
           arch_type: ${{ matrix.arch_type }}
         run: |
-          mkdir -p /tmp/digests
+          mkdir -p ${{ runner.temp }}/digests
           digest="${digest}"
-          touch "/tmp/digests/${triple_prefix}-${arch_type}_${digest#sha256:}"
+          touch "${{ runner.temp }}/digests/${triple_prefix}-${arch_type}_${digest#sha256:}"
 
-      # Upload digest
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
-          path: /tmp/digests/*
+          path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
 
       # - name: Attest
       #   uses: actions/attest-build-provenance@v2
       #   with:
-      #     subject-name: ${{ env.REGISTRY_IMAGE_GHCR }}
+      #     subject-name: ${{ env.GHCR_REPO }}
       #     subject-digest: ${{ steps.push.outputs.digest }}
       #     push-to-registry: true
 
@@ -143,50 +132,63 @@ jobs:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          path: /tmp/digests
+          path: ${{ runner.temp }}/digests
           pattern: digests-*
           merge-multiple: true
 
-      # Set up Docker Buildx
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           cache-binary: false
 
-      # Generate Docker metadata
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_IMAGE_GHCR }}
+          images: |
+            ${{ env.GHCR_REPO }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
-      # Login to GitHub Container Registry
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+      # # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
+      # - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
+      #   working-directory: /tmp/digests
+      #   run: |
+      #     ghcr_digests=()
 
-      # Create and push manifest lists for ${{ env.SET_IMAGE_TAG }} tag
-      - name: Create manifest list and push ${{ env.SET_IMAGE_TAG }}
-        working-directory: /tmp/digests
+      #     for files in tmp/*; do
+      #       filename="$(basename "$files")"
+      #       triple="${filename%_*}"
+      #       if [[ "${triple}" =~ ^x86_64- ]]; then
+      #         triple="${triple#x86_64-}"
+      #       elif [[ "${triple}" =~ ^aarch64- ]]; then
+      #         triple="${triple#aarch64-}"
+      #       fi
+      #       sha="${filename##*_}"
+
+      #       docker buildx imagetools create -t ${GHCR_REPO}:${triple} ${GHCR_REPO}@sha256:${sha}
+      #       docker buildx imagetools inspect ${GHCR_REPO}:${triple}
+      #     done
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
         run: |
-          ghcr_digests=()
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
 
-          for files in tmp/*; do
-            filename="$(basename "$files")"
-            triple="${filename%_*}"
-            if [[ "${triple}" =~ ^x86_64- ]]; then
-              triple="${triple#x86_64-}"
-            elif [[ "${triple}" =~ ^aarch64- ]]; then
-              triple="${triple#aarch64-}"
-            fi
-            sha="${filename##*_}"
-
-            docker buildx imagetools create -t ${REGISTRY_IMAGE_GHCR}:${triple} ${REGISTRY_IMAGE_GHCR}@sha256:${sha}
-            docker buildx imagetools inspect ${REGISTRY_IMAGE_GHCR}:${triple}
-          done
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.GHCR_REPO }}:${{ steps.meta.outputs.version }}
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
