@@ -94,7 +94,7 @@ jobs:
   #           BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
 
   docker-test:
-    # needs: [docker-publish]
+    needs: [bootstrap-matrix]
     runs-on: ${{ matrix.runs-on }}
     container: ghcr.io/userdocs/qbt-musl-cross-make:${{ matrix.arch_type }}
     permissions:
@@ -111,7 +111,7 @@ jobs:
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
-    needs: [docker-test]
+    needs: [bootstrap-matrix, docker-test]
     concurrency:
       group: ci-auto-rerun-failed-jobs
       cancel-in-progress: true
