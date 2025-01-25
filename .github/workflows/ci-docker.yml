@@ -177,7 +177,7 @@ jobs:
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
-    needs: [check_release]
+    needs: [docker-publish]
     concurrency:
       group: ci-auto-rerun-failed-jobs
       cancel-in-progress: true
