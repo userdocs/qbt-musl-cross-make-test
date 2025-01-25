@@ -95,7 +95,7 @@ jobs:
 
   docker-test:
     needs: [bootstrap-matrix]
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.build_host }}
     container: ghcr.io/userdocs/qbt-musl-cross-make:${{ matrix.arch_type }}
     permissions:
       contents: write
