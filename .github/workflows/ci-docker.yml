@@ -124,23 +124,25 @@ jobs:
       #     subject-digest: ${{ steps.push.outputs.digest }}
       #     push-to-registry: true
 
-  # docker-merge:
-  #   needs: [docker-publish]
-  #   runs-on: ubuntu-24.04-arm
-  #   permissions:
-  #     packages: write
-  #     contents: read
+  docker-merge:
+    needs: [docker-publish]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      packages: write
+      contents: read
 
-  #   env:
-  #     registry: ${{ env.REGISTRY_IMAGE_GHCR }}
-  #   steps:
-  #     # Download digests
-  #     - name: Download digests
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: /tmp/digests
-  #         pattern: digests-*
-  #         merge-multiple: true
+    env:
+      registry: ${{ env.REGISTRY_IMAGE_GHCR }}
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - run: ls -la /tmp/digests
 
   #     # Set up Docker Buildx
   #     - name: Set up Docker Buildx
