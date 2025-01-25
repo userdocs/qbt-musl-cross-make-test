@@ -50,8 +50,8 @@ jobs:
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
-      - name: Host - update
-        run: sudo apt-get update
+      # - name: Host - update
+      #   run: sudo apt-get update
 
       - name: Host - set up qemu-user-static binfmt-support
         run: sudo apt install libpipeline1 qemu-user-static binfmt-support
