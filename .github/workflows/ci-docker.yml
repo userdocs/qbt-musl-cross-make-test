@@ -87,7 +87,8 @@ jobs:
           tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
           no-cache: true
           build-args: |
-            TARGET=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
+            URL=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
+            ARCH=${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
 
   ci-auto-rerun-failed-jobs:
