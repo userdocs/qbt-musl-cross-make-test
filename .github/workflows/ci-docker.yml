@@ -85,7 +85,7 @@ jobs:
         with:
           context: .
           push: true
-          proveance: false
+          provenance: false
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
