@@ -110,10 +110,12 @@ jobs:
       - name: Export digest
         env:
           digest: ${{ steps.push.outputs.digest }}
+          triple_prefix: ${{ matrix.triple_prefix }}
+          arch_type: ${{ matrix.arch_type }}
         run: |
           mkdir -p /tmp/digests
           digest="${digest}"
-          touch "/tmp/digests/${{ matrix.triple_prefix }}-${{ matrix.arch_type }}_${digest#sha256:}"
+          touch "/tmp/digests/${triple_prefix}-${arch_type}_${digest#sha256:}"
 
       # Upload digest
       - name: Upload digest
