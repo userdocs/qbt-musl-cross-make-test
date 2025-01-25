@@ -34,7 +34,7 @@ jobs:
 
       - name: bootstrap the matrix
         id: triples
-        run: echo "matrix_includes=$(jq -c '{"arch_type": .arch_type}' triples.json)" >> $GITHUB_OUTPUT
+        run: echo "matrix_includes={"arch_type":$(jq -c .arch_type triples.json)}" >> $GITHUB_OUTPUT
 
   docker-publish:
     needs: [bootstrap-matrix]
