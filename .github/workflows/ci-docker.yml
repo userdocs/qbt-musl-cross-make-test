@@ -183,9 +183,9 @@ jobs:
               triple="${triple#aarch64-}"
             fi
             sha="${filename##*_}"
-            # ghcr_digests+=("${REGISTRY_IMAGE_GHCR}@sha256:${sha}")
-            docker buildx imagetools create -t "${REGISTRY_IMAGE_GHCR}:${triple}" "${REGISTRY_IMAGE_GHCR}@sha256:${sha}"
-            docker buildx imagetools inspect "${REGISTRY_IMAGE_GHCR}:${triple}"
+
+            docker buildx imagetools create -t ${REGISTRY_IMAGE_GHCR}:${triple} ${REGISTRY_IMAGE_GHCR}@sha256:${sha}
+            docker buildx imagetools inspect ${REGISTRY_IMAGE_GHCR}:${triple}
           done
 
   ci-auto-rerun-failed-jobs:
