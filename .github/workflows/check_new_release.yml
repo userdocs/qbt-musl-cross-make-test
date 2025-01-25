@@ -170,11 +170,14 @@ jobs:
         if: env.trigger_workflow == 'yes'
         run: |
           # Trigger workflow and capture run ID
-          run_id=$(gh workflow run ci-matrix-mcm-build-and-release.yml --json ID -q .ID)
+          gh workflow run ci-matrix-mcm-build-and-release.yml
+          run_id=$(gh run list --json databaseId --workflow=ci-matrix-mcm-build-and-release.yml --limit 1 -q  '.[0].databaseId'
+
           if [ -z "$run_id" ]; then
             echo "Error: Failed to trigger workflow"
             exit 1
           fi
+
           echo "Triggered workflow run ID: $run_id"
 
           # Watch workflow execution
