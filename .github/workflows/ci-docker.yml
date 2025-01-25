@@ -113,7 +113,7 @@ jobs:
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
-    needs: [docker-publish, docker-test]
+    needs: [docker-test]
     concurrency:
       group: ci-auto-rerun-failed-jobs
       cancel-in-progress: true
