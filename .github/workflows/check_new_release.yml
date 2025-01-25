@@ -129,8 +129,6 @@ jobs:
             fi
           done
 
-          echo "trigger_workflow=yes" >> $GITHUB_ENV
-
           cat > "versions.json" <<- VERSIONS_JSON
           {
             "CONFIG_SUB_REV": "${remote_versions[CONFIG_SUB_REV]}",
@@ -163,16 +161,16 @@ jobs:
           git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "Automated commit by GitHub Actions"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
 
-      - name: Trigger workflow - matrix-mcm-build-and-release.yml
+      - name: Trigger workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
-        run: gh workflow run matrix-mcm-build-and-release.yml
+        run: gh workflow run ci-matrix-mcm-build-and-release.yml
 
-      - name: Await workflow - matrix-mcm-build-and-release.yml
+      - name: Await workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
         uses: codex-/await-local-workflow-run@v1
         with:
           token: ${{ github.token }}
-          workflow: "matrix-mcm-build-and-release.yml"
+          workflow: "ci-matrix-mcm-build-and-release.yml"
           timeout_mins: 60
           poll_interval_ms: 10000
 
