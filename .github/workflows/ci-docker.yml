@@ -37,7 +37,7 @@ jobs:
         id: triples
         run: |
           echo "docker_publish=$(jq -c '{arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
-          echo "docker_test=$(jq -c .arch_type triples.json)" >> $GITHUB_OUTPUT
+          echo "docker_test=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
 
   # docker-publish:
   #   needs: [bootstrap-matrix]
@@ -101,9 +101,7 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      matrix:
-        build_host: ["ubuntu-24.04", "ubuntu-24.04-arm"]
-        arch_type: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test) }}
+      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test) }}
 
     steps:
       - name: file gcc
