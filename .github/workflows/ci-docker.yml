@@ -50,11 +50,11 @@ jobs:
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
-      # - name: Host - update
-      #   run: sudo apt-get update
+      - name: Host - update
+        run: sudo apt-get update
 
-      # - name: Host - set up qemu-user-static binfmt-support
-      #   run: sudo apt install libpipeline1 qemu-user-static binfmt-support
+      - name: Host - set up qemu-user-static binfmt-support
+        run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
       - uses: actions/checkout@v4
         with:
@@ -75,8 +75,8 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
