@@ -102,7 +102,9 @@ jobs:
 
     steps:
       - name: file gcc
-        run: file /usr/local/bin/${{ matrix.arch_type }}-gcc
+        env:
+          arch_type: ${{ matrix.arch_type }}
+        run: file /usr/local/bin/${arch_type}-gcc
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
