@@ -161,13 +161,12 @@ jobs:
           if [[ -f "versions.json" ]] && [[ -f "versions.mak" ]] && [[ -d "hashes" ]]; then
             git add versions.json versions.mak hashes/*.sha1 || true
             git status --porcelain | grep -q . && {
+            git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "Automated commit by GitHub Actions"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
               echo "Changes detected, setting trigger_workflow=yes"
               echo "trigger_workflow=yes" >> $GITHUB_ENV
             } || echo "No changes detected"
           fi
-
-          git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "Automated commit by GitHub Actions"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
 
       - name: Trigger workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
