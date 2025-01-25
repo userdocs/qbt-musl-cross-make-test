@@ -51,8 +51,6 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_publish) }}
 
-    name: ${{ runner.name }} ${{ matrix.arch_type }}
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,8 +106,6 @@ jobs:
         env:
           arch_type: ${{ matrix.arch_type }}
         run: file /usr/local/bin/${arch_type}-gcc
-
-    name: ${{ runner.name }} ${{ matrix.arch_type }}
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
