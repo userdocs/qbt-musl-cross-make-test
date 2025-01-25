@@ -129,6 +129,8 @@ jobs:
             fi
           done
 
+          echo "trigger_workflow=yes" >> $GITHUB_ENV
+
           cat > "versions.json" <<- VERSIONS_JSON
           {
             "CONFIG_SUB_REV": "${remote_versions[CONFIG_SUB_REV]}",
