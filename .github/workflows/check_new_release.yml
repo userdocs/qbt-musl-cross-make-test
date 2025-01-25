@@ -45,7 +45,7 @@ jobs:
       checks: read
     name: "Check for latest releases or tags"
     env:
-      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      GH_TOKEN: "${{ github.token}}"
       trigger_workflow: "no"
 
     steps:
@@ -168,16 +168,33 @@ jobs:
 
       - name: Trigger workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
-        run: gh workflow run ci-matrix-mcm-build-and-release.yml
+        run: |
+          # Trigger workflow and capture run ID
+          run_id=$(gh workflow run ci-matrix-mcm-build-and-release.yml --json ID -q .ID)
+          if [ -z "$run_id" ]; then
+            echo "Error: Failed to trigger workflow"
+            exit 1
+          fi
+          echo "Triggered workflow run ID: $run_id"
 
-      - name: Await workflow - ci-matrix-mcm-build-and-release.yml
-        if: env.trigger_workflow == 'yes'
-        uses: codex-/await-local-workflow-run@v1
-        with:
-          token: ${{ github.token }}
-          workflow: "ci-matrix-mcm-build-and-release.yml"
-          timeout_mins: 60
-          poll_interval_ms: 10000
+          # Watch workflow execution
+          gh run watch "$run_id" --exit-status || {
+            echo "Error: Workflow failed or watch command failed"
+            exit 1
+          }
+
+      # - name: Await workflow - ci-matrix-mcm-build-and-release.yml
+      #   run: |
+      #     gh workflow run ci-matrix-mcm-build-and-release.yml
+
+      # - name: Await workflow - ci-matrix-mcm-build-and-release.yml
+      #   if: env.trigger_workflow == 'yes'
+      #   uses: codex-/await-local-workflow-run@v1
+      #   with:
+      #     token: ${{ github.token }}
+      #     workflow: "ci-matrix-mcm-build-and-release.yml"
+      #     timeout_mins: 60
+      #     poll_interval_ms: 10000
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
