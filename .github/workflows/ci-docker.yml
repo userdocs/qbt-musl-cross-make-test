@@ -131,9 +131,6 @@ jobs:
       packages: write
       contents: read
 
-    env:
-      registry: ${{ env.REGISTRY_IMAGE_GHCR }}
-
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
