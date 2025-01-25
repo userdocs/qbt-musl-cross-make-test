@@ -56,6 +56,10 @@ jobs:
       # - name: Host - set up qemu-user-static binfmt-support
       #   run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -85,8 +89,6 @@ jobs:
         id: push
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
           platforms: linux/${{ matrix.docker_platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
