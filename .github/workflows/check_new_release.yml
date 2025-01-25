@@ -166,37 +166,14 @@ jobs:
             } || echo "No changes detected"
           fi
 
-      - name: Trigger workflow - ci-matrix-mcm-build-and-release.yml
+      - name: Await workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
-        run: |
-          gh workflow run ci-matrix-mcm-build-and-release.yml
-          run_id=$(gh run list --json databaseId --workflow=ci-matrix-mcm-build-and-release.yml --limit 1 -q  '.[0].databaseId')
-
-          if [[ -z "$run_id" ]]; then
-            echo "Error: Failed to trigger workflow"
-            exit 1
-          fi
-
-          echo "Triggered workflow run ID: $run_id"
-
-          # Watch workflow execution
-          gh run watch "$run_id" --exit-status || {
-            echo "Error: Workflow failed or watch command failed"
-            exit 1
-          }
-
-      # - name: Await workflow - ci-matrix-mcm-build-and-release.yml
-      #   run: |
-      #     gh workflow run ci-matrix-mcm-build-and-release.yml
-
-      # - name: Await workflow - ci-matrix-mcm-build-and-release.yml
-      #   if: env.trigger_workflow == 'yes'
-      #   uses: codex-/await-local-workflow-run@v1
-      #   with:
-      #     token: ${{ github.token }}
-      #     workflow: "ci-matrix-mcm-build-and-release.yml"
-      #     timeout_mins: 60
-      #     poll_interval_ms: 10000
+        uses: codex-/await-local-workflow-run@v1
+        with:
+          token: ${{ github.token }}
+          workflow: "ci-matrix-mcm-build-and-release.yml"
+          timeout_mins: 60
+          poll_interval_ms: 10000 # 10 seconds
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
