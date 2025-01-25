@@ -18,7 +18,6 @@ on:
 env:
   GHCR_REPO: ghcr.io/${{ github.repository }}
   DOCKERHUB_REPO: ${{ github.repository }}
-  BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
   DOCKER_BUILD_SUMMARY: "false"
 
 jobs:
@@ -52,9 +51,6 @@ jobs:
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
-      # - name: Host - set up qemu-user-static binfmt-support
-      #   run: sudo apt install libpipeline1 qemu-user-static binfmt-support
-
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
