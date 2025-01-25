@@ -46,7 +46,26 @@ jobs:
       attestations: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
+      matrix:
+        arch_type:
+          [
+            "aarch64-linux-musl",
+            "arm-linux-musleabi",
+            "arm-linux-musleabihf",
+            "armv6-linux-musleabihf",
+            "armv7l-linux-musleabihf",
+            "i686-linux-musl",
+            "x86_64-linux-musl",
+            "mips-linux-musl",
+            "mipsel-linux-musl",
+            "mips64-linux-musl",
+            "mips64el-linux-musl",
+            "powerpc-linux-musl",
+            "powerpc64le-linux-musl",
+            "s390x-linux-musl",
+            "riscv64-linux-musl",
+            "loongarch64-linux-musl",
+          ]
 
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
@@ -87,7 +106,6 @@ jobs:
           tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
           no-cache: true
           build-args: |
-            URL=${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
             ARCH=${{ matrix.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
 
