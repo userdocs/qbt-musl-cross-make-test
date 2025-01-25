@@ -1,4 +1,4 @@
-name: qbt-musl-cross-make - check for new releases
+name: ci-check-new-release
 
 on:
   workflow_dispatch:
