@@ -50,9 +50,6 @@ jobs:
     name: docker ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
-      # - name: Host - update
-      #   run: sudo apt-get update
-
       - name: Host - set up qemu-user-static binfmt-support
         run: sudo apt install libpipeline1 qemu-user-static binfmt-support
 
@@ -92,7 +89,7 @@ jobs:
           context: .
           platforms: linux/${{ matrix.docker_platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
+          #tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
           outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
           no-cache: true
           build-args: |
