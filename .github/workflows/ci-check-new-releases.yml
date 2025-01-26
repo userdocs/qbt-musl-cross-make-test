@@ -18,6 +18,7 @@ jobs:
     env:
       GH_TOKEN: "${{ github.token}}"
       build_new_release: "false"
+      bypass_check: ${{ inputs.bypass_check }}
 
     steps:
       - uses: actions/checkout@v4
@@ -127,7 +128,7 @@ jobs:
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
 
-          if [[ ${{ inputs.bypass_check }} == 'true' ]] ; then
+          if [[ ${bypass_check} == 'true' ]] ; then
             printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
           fi
 
