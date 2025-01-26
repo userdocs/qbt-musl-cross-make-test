@@ -15,10 +15,6 @@ jobs:
     outputs:
       build_new_release: ${{ steps.boot_strap_release.outputs.build_new_release }}
     runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: write
-      actions: write
-      checks: read
     name: "Check for latest releases or tags"
     env:
       GH_TOKEN: "${{ github.token}}"

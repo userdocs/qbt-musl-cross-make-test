@@ -48,7 +48,7 @@ jobs:
       group: ci-check-new-releases
       cancel-in-progress: true
     permissions:
-      contents: read
+      contents: write
     uses: ./.github/workflows/ci-check-new-releases.yml
     with:
       bypass_check: ${{ github.event.inputs.bypass_check }}

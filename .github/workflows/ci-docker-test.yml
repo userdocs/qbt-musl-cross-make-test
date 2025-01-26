@@ -12,8 +12,6 @@ jobs:
   docker-test:
     runs-on: ${{ matrix.build_host }}
     container: ghcr.io/userdocs/qbt-musl-cross-make:${{ matrix.arch_type }}
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.docker_test_matrix) }}
