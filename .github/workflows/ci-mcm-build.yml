@@ -42,8 +42,8 @@ jobs:
 
       - name: Host - Create docker multiarch container
         run: |
-          docker run --name mcm -it -d -w /home/github -v ${{ github.workspace }}:/home/github ${matrix_alpine_prefix}/alpine:edge
-          docker exec mcm sh -c 'adduser -h /home/github -Ds /bin/bash -u 1001 github && apk add sudo'
+          docker run --name mcm -it -d -w /home/gh -v ${{ github.workspace }}:/home/gh ${matrix_alpine_prefix}/alpine:edge
+          docker exec mcm sh -c 'adduser -h /home/gh -Ds /bin/bash -u 1001 github && apk add sudo'
           docker exec mcm sh -c 'printf "%s" "github ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/github'
 
       - name: Docker - apk update
@@ -63,7 +63,7 @@ jobs:
         run: cat config.mak
 
       - name: Docker - install ${{ matrix.arch_type }} toolchain
-        run: docker exec -u github:github mcm make -j"$(nproc)" install TARGET="${matrix_arch_type}" OUTPUT="/home/github/build/${matrix_arch_type}"
+        run: docker exec -u gh:gh mcm make -j"$(nproc)" install TARGET="${matrix_arch_type}" OUTPUT="/home/gh/build/${matrix_arch_type}"
 
       - name: Host - archive ${{ matrix.arch_type }} toolchain
         run: |
