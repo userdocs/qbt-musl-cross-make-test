@@ -127,10 +127,9 @@ jobs:
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
 
-      - name: Bypass check to build new release
-        id: boot_strap_release
-        if: ${{ inputs.bypass_check == 'true' }}
-        run: printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+          if [[ ${{ inputs.bypass_check }} == 'true' ]] ; then
+            printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and Push
         if: ${{ steps.boot_strap_release.outputs.build_new_release == 'true' }}
