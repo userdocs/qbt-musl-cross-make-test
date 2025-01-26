@@ -3,7 +3,7 @@ name: ci - docker-build
 on:
   workflow_call:
     inputs:
-      docker_build_matrix:
+      arch_type:
         description: "Json matrix for docker build"
         required: true
         type: string
@@ -51,8 +51,8 @@ jobs:
           provenance: false
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ env.GHCR_REPO }}:${{ matrix.arch_type }}
+          tags: ${{ env.GHCR_REPO }}:${{ inputs.arch_type }}
           no-cache: true
           build-args: |
-            ARCH=${{ matrix.arch_type }}
+            ARCH=${{ inputs.arch_type }}
             BASE_URL=https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download
