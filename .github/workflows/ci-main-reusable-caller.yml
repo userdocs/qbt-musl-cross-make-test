@@ -98,7 +98,7 @@ jobs:
 
   ci-docker-build:
     if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
-    needs: [ci-mcm-build]
+    needs: [ci-mcm-release]
     concurrency:
       group: ci-docker-build
       cancel-in-progress: true
@@ -125,7 +125,15 @@ jobs:
 
   ci-auto-rerun-failed-jobs:
     if: failure() && (github.event.inputs.skip_rerun || 'false') == 'false'
-    needs: [build]
+    needs:
+      [
+        skip_duplicate_job,
+        bootstrap-matrix,
+        ci-mcm-build,
+        ci-mcm-release,
+        ci-docker-build,
+        ci-docker-test,
+      ]
     concurrency:
       group: ci-auto-rerun-failed-jobs
       cancel-in-progress: true
