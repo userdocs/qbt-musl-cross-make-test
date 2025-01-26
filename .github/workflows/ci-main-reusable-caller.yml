@@ -84,6 +84,7 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04-arm
+    if: always() && !failure() && !cancelled()
     needs: [bootstrap-matrix]
     steps:
       - run: |
