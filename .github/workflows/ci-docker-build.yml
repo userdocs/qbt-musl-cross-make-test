@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.docker_build_matrix) }}
+      matrix: ${{ inputs.docker_build_matrix }}
 
     env:
       GHCR_REPO: ghcr.io/${{ github.repository }}
