@@ -1,4 +1,4 @@
-name: ci-mcm-build
+name: ci - mcm-build
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: ci-check-new-release
+name: ci - check-new-release
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: ci-mcm-release
+name: ci - mcm-release
 
 on:
   workflow_call:

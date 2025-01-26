@@ -1,4 +1,4 @@
-name: ci-docker-build
+name: ci - docker-build
 
 on:
   workflow_call:
