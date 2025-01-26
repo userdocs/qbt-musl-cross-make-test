@@ -44,6 +44,7 @@ jobs:
 
   ci-check-new-releases:
     if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' }}
+    needs: [skip_duplicate_job]
     concurrency:
       group: ci-check-new-releases
       cancel-in-progress: true
@@ -55,6 +56,7 @@ jobs:
 
   bootstrap-matrix:
     if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    needs: [ci-check-new-releases]
     runs-on: ubuntu-24.04-arm
     outputs:
       mcm_build_matrix: ${{ steps.triples.outputs.mcm_build_matrix }}
