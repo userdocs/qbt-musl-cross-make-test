@@ -1,34 +1,19 @@
-name: ci-matrix-mcm-build-and-release
+name: ci-mcm-build
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      mcm_build_matrix:
+        description: "Json matrix for mcm build"
+        required: true
+        type: string
 
 jobs:
-  bootstrap-matrix:
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    outputs:
-      matrix_includes: ${{ steps.triples.outputs.matrix_includes }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: bootstrap the matrix
-        id: triples
-        run: echo "matrix_includes=$(jq -c . triples.json)" >> $GITHUB_OUTPUT
-
   build:
-    needs: [bootstrap-matrix]
     runs-on: ${{ matrix.build_host }}
-    permissions:
-      id-token: write
-      contents: read
-      attestations: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.matrix_includes) }}
+      matrix: ${{ fromJSON(inputs.mcm_build_matrix) }}
     env:
       matrix_alpine_prefix: ${{ matrix.alpine_prefix }}
       matrix_arch_type: ${{ matrix.arch_type }}
@@ -96,41 +81,3 @@ jobs:
         with:
           name: "qbt-mcm-${{ matrix.triple_prefix }}-${{ matrix.arch_type }}"
           path: "build/${{ matrix.triple_prefix }}-${{ matrix.arch_type }}.tar.xz"
-
-  release:
-    name: Upload artifacts to release
-    runs-on: ubuntu-24.04-arm
-    needs: [build]
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Host - Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: qbt-mcm
-          pattern: qbt-mcm-*
-          merge-multiple: true
-
-      - name: set release info from versions.mak
-        run: |
-          cp -f versions.mak release_body.md
-          jq -R 'split(" = ") | {(.[0]):.[1]}' versions.mak | jq -s 'add' > versions.json
-
-      - name: set tag via date
-        run: echo "github_tag=$(date +"%y%V")" >> $GITHUB_ENV
-
-      - name: Create release - tag - assets
-        uses: ncipollo/release-action@v1
-        with:
-          prerelease: false
-          artifacts: "qbt-mcm/*.tar.xz,versions.json"
-          replacesArtifacts: true
-          tag: "${{ env.github_tag }}"
-          name: "qbt-musl-cross-make toolchains"
-          bodyFile: release_body.md
-          allowUpdates: true
