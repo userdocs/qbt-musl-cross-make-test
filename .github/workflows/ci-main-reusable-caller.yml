@@ -92,9 +92,9 @@ jobs:
           echo "docker_build_matrix: ${{ needs.bootstrap-matrix.outputs.docker_build_matrix }}"
           echo "docker_test_matrix: ${{ needs.bootstrap-matrix.outputs.docker_test_matrix }}"
 
-          echo "mcm_build_matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.mcm_build_matrix) }}"
-          echo "docker_build_matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_build_matrix) }}"
-          echo "docker_test_matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test_matrix) }}"
+          ${{ fromJSON(needs.bootstrap-matrix.outputs.mcm_build_matrix) }}"
+          ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_build_matrix) }}"
+          ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test_matrix) }}"
 
   ci-mcm-build:
     if: >
