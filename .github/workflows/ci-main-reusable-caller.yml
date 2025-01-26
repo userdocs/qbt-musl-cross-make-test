@@ -82,20 +82,6 @@ jobs:
           echo "docker_build_matrix=$(jq -c '{arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
           echo "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
 
-  # test:
-  #   runs-on: ubuntu-24.04-arm
-  #   if: always() && !failure() && !cancelled()
-  #   needs: [bootstrap-matrix]
-  #   steps:
-  #     - run: |
-  #         echo "mcm_build_matrix: ${{ needs.bootstrap-matrix.outputs.mcm_build_matrix }}"
-  #         echo "docker_build_matrix: ${{ needs.bootstrap-matrix.outputs.docker_build_matrix }}"
-  #         echo "docker_test_matrix: ${{ needs.bootstrap-matrix.outputs.docker_test_matrix }}"
-
-  #         ${{ fromJSON(needs.bootstrap-matrix.outputs.mcm_build_matrix) }}"
-  #         ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_build_matrix) }}"
-  #         ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_test_matrix) }}"
-
   ci-mcm-build:
     if: >
       needs.skip_duplicate_job.outputs.should_skip != 'true' &&
@@ -138,6 +124,9 @@ jobs:
       id-token: write
       packages: write
       attestations: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.docker_build_matrix) }}
     uses: ./.github/workflows/ci-docker-build.yml
     with:
       docker_build_matrix: ${{ needs.bootstrap-matrix.outputs.docker_build_matrix }}
