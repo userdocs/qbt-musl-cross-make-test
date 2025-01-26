@@ -3,6 +3,11 @@ name: ci - main reusable caller
 on:
   workflow_dispatch:
     inputs:
+      toolchains_only:
+        description: "Only toolchain jobs"
+        required: true
+        default: false
+        type: boolean
       docker_only:
         description: "Only docker jobs"
         required: true
@@ -48,7 +53,7 @@ jobs:
           do_not_skip: ""
 
   ci-check-new-releases:
-    if: needs.skip_duplicate_job.outputs.should_skip != 'true' && github.event.inputs.docker_only == 'false'
+    if: needs.skip_duplicate_job.outputs.should_skip != 'true' && github.event.inputs.docker_only != 'true'
     needs: [skip_duplicate_job]
     concurrency:
       group: ci-check-new-releases
@@ -61,9 +66,10 @@ jobs:
 
   bootstrap-matrix:
     if: >
-      always() && !failure() && !cancelled() &&
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
-      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
+      always() && !failure() && !cancelled()
+      && needs.skip_duplicate_job.outputs.should_skip != 'true'
+      && ( needs.ci-check-new-releases.outputs.build_new_release == 'true' ||
+      github.event.inputs.docker_only != 'true' && github.event.inputs.toolchains_only != 'false' )
     needs: [ci-check-new-releases]
     runs-on: ubuntu-24.04-arm
     outputs:
@@ -84,8 +90,10 @@ jobs:
 
   ci-mcm-build:
     if: >
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
-      ( github.event.inputs.docker_only == 'false' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
+      always() && !failure() && !cancelled() &&
+      needs.skip_duplicate_job.outputs.should_skip != 'true'
+      && ( needs.ci-check-new-releases.outputs.build_new_release == 'true' ||
+      github.event.inputs.docker_only != 'true' && github.event.inputs.toolchains_only != 'false' )
     needs: [bootstrap-matrix]
     concurrency:
       group: ci-mcm-build
@@ -100,8 +108,10 @@ jobs:
 
   ci-mcm-release:
     if: >
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
-      ( github.event.inputs.docker_only == 'false' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
+      always() && !failure() && !cancelled() &&
+      needs.skip_duplicate_job.outputs.should_skip != 'true'
+      && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
+      || github.event.inputs.docker_only != 'true' && github.event.inputs.toolchains_only != 'false' )
     needs: [ci-mcm-build]
     concurrency:
       group: ci-mcm-release
@@ -113,8 +123,9 @@ jobs:
   ci-docker-build:
     if: >
       always() && !failure() && !cancelled() &&
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
-      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
+      needs.skip_duplicate_job.outputs.should_skip != 'true'
+      && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
+      || github.event.inputs.docker_only != 'false' && github.event.inputs.toolchains_only != 'true' )
     needs: [bootstrap-matrix, ci-mcm-release]
     concurrency:
       group: ci-docker-build
@@ -130,8 +141,10 @@ jobs:
 
   ci-docker-test:
     if: >
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
-      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
+      always() && !failure() && !cancelled() &&
+      needs.skip_duplicate_job.outputs.should_skip != 'true'
+      && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
+      || github.event.inputs.docker_only != 'false' && github.event.inputs.toolchains_only != 'true' )
     needs: [bootstrap-matrix, ci-docker-build]
     concurrency:
       group: ci-docker-test
