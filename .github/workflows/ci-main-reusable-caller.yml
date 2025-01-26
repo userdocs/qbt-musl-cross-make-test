@@ -3,6 +3,11 @@ name: ci - main reusable caller
 on:
   workflow_dispatch:
     inputs:
+      docker_only:
+        description: "Only docker jobs"
+        required: true
+        default: false
+        type: boolean
       bypass_check:
         description: "Bypass check to build new release?"
         required: true
@@ -75,7 +80,9 @@ jobs:
           echo "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
 
   ci-mcm-build:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    if: >
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( github.event.inputs.docker_only == 'false' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [bootstrap-matrix]
     concurrency:
       group: ci-mcm-build
@@ -89,7 +96,9 @@ jobs:
       mcm_build_matrix: ${{ needs.bootstrap-matrix.outputs.mcm_build_matrix }}
 
   ci-mcm-release:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    if: >
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( github.event.inputs.docker_only == 'false' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-mcm-build]
     concurrency:
       group: ci-mcm-release
@@ -99,7 +108,9 @@ jobs:
     uses: ./.github/workflows/ci-mcm-release.yml
 
   ci-docker-build:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    if: >
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-mcm-release]
     concurrency:
       group: ci-docker-build
@@ -114,7 +125,9 @@ jobs:
       docker_build_matrix: ${{ needs.bootstrap-matrix.outputs.docker_build_matrix }}
 
   ci-docker-test:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    if: >
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-docker-build]
     concurrency:
       group: ci-docker-test
