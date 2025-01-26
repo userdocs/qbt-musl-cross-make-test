@@ -166,6 +166,10 @@ jobs:
             } || echo "No changes detected"
           fi
 
+      - name: Trigger workflow - ci-matrix-mcm-build-and-release.yml
+        if: env.trigger_workflow == 'yes'
+        run: gh workflow run ci-matrix-mcm-build-and-release.yml
+
       - name: Await workflow - ci-matrix-mcm-build-and-release.yml
         if: env.trigger_workflow == 'yes'
         uses: codex-/await-local-workflow-run@v1
