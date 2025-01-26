@@ -48,7 +48,7 @@ jobs:
           do_not_skip: ""
 
   ci-check-new-releases:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' }}
+    if: needs.skip_duplicate_job.outputs.should_skip != 'true' && github.event.inputs.docker_only == 'false'
     needs: [skip_duplicate_job]
     concurrency:
       group: ci-check-new-releases
@@ -60,7 +60,10 @@ jobs:
       bypass_check: ${{ github.event.inputs.bypass_check }}
 
   bootstrap-matrix:
-    if: ${{ needs.skip_duplicate_job.outputs.should_skip != 'true' && needs.ci-check-new-releases.outputs.build_new_release == 'true' }}
+    if: >
+      always() && !failure() && !cancelled() &&
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-check-new-releases]
     runs-on: ubuntu-24.04-arm
     outputs:
@@ -109,7 +112,8 @@ jobs:
 
   ci-docker-build:
     if: >
-      ( always() && !failure() && !cancelled() && needs.skip_duplicate_job.outputs.should_skip != 'true' ) &&
+      always() && !failure() && !cancelled() &&
+      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
       ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-mcm-release]
     concurrency:
