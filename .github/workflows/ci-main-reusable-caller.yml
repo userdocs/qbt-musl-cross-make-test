@@ -109,7 +109,7 @@ jobs:
 
   ci-docker-build:
     if: >
-      needs.skip_duplicate_job.outputs.should_skip != 'true' &&
+      ( always() && !failure() && !cancelled() && needs.skip_duplicate_job.outputs.should_skip != 'true' ) &&
       ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
     needs: [ci-mcm-release]
     concurrency:
