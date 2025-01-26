@@ -9,7 +9,8 @@ on:
         type: string
 
 jobs:
-  build:
+  mcm-build:
+    name: ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
     runs-on: ${{ matrix.build_host }}
     strategy:
       fail-fast: false
@@ -20,8 +21,6 @@ jobs:
       matrix_arch_config: ${{ matrix.arch_config }}
       matrix_triple_prefix: ${{ matrix.triple_prefix }}
       matrix_docker_platform: ${{ matrix.docker_platform }}
-
-    name: build ${{ matrix.triple_prefix }}-${{ matrix.arch_type }}
 
     steps:
       - name: Checkout

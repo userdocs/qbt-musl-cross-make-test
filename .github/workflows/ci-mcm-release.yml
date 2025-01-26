@@ -4,8 +4,8 @@ on:
   workflow_call:
 
 jobs:
-  release:
-    name: ci-mcm-release
+  mcm-release:
+    name: mcm release
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout

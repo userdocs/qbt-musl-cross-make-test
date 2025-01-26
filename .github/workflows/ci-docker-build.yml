@@ -9,7 +9,7 @@ on:
         type: string
 
 jobs:
-  docker-publish:
+  docker-build:
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
