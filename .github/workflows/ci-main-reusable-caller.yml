@@ -115,7 +115,7 @@ jobs:
       always() && !failure() && !cancelled() &&
       needs.skip_duplicate_job.outputs.should_skip != 'true' &&
       ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
-    needs: [ci-mcm-release]
+    needs: [bootstrap-matrix, ci-mcm-release]
     concurrency:
       group: ci-docker-build
       cancel-in-progress: true
@@ -124,18 +124,15 @@ jobs:
       id-token: write
       packages: write
       attestations: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.bootstrap-matrix.outputs.docker_build_matrix) }}
     uses: ./.github/workflows/ci-docker-build.yml
     with:
-      arch_type: ${{ matrix.arch_type }}
+      docker_build_matrix: ${{ needs.bootstrap-matrix.outputs.docker_build_matrix }}
 
   ci-docker-test:
     if: >
       needs.skip_duplicate_job.outputs.should_skip != 'true' &&
       ( github.event.inputs.docker_only == 'true' || needs.ci-check-new-releases.outputs.build_new_release == 'true' )
-    needs: [ci-docker-build]
+    needs: [bootstrap-matrix, ci-docker-build]
     concurrency:
       group: ci-docker-test
       cancel-in-progress: true
