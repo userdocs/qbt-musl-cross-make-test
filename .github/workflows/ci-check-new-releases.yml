@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     env:
       GH_TOKEN: "${{ github.token}}"
-      trigger_workflow: "no"
+      build_new_release: "false"
 
     steps:
       - uses: actions/checkout@v4
@@ -94,8 +94,7 @@ jobs:
                 if [[ "$iray" != "MUSL_VER" ]]; then
                   printf '%s' "$(curl -sL "${remote_urls_dl[$iray]}" | sha1sum | sed 's/-/config.sub/')" > "hashes/config.sub.${remote_versions[CONFIG_SUB_REV]}.sha1"
                 fi
-                echo "trigger_workflow=yes" >> $GITHUB_ENV
-                printf '%s\n' "=true" >> $GITHUB_OUTPUT
+                printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
               else
                 printf "%-14s current:%-10s remote:%-10s\n" "$iray" "${current_versions[$iray]}" "${remote_versions[$iray]}"
               fi
@@ -129,6 +128,7 @@ jobs:
           VERSIONS_MAK
 
       - name: Bypass check to build new release
+        id: boot_strap_release
         if: ${{ inputs.bypass_check == 'true' }}
         run: printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
 
