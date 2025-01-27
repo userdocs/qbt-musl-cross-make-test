@@ -72,7 +72,7 @@ jobs:
       always() && !failure() && !cancelled()
       && needs.skip_duplicate_job.outputs.should_skip != 'true'
       && needs.ci-check-new-releases.outputs.build_new_release == 'true' ||
-      ( github.event.inputs.docker_only != 'false' || github.event.inputs.toolchains_only != 'false' )
+      ( github.event.inputs.docker_only == 'true' || github.event.inputs.toolchains_only == 'true' )
     needs: [ci-check-new-releases]
     runs-on: ubuntu-24.04-arm
     outputs:
