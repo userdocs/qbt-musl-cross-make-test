@@ -57,7 +57,7 @@ jobs:
 
   scheduled_defaults:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true' && github.event_name != 'workflow_dispatch'
-    needs: skip_duplicate_job
+    needs: [skip_duplicate_job]
     runs-on: ubuntu-24.04-arm
     outputs:
       toolchains_only: ${{ github.event.inputs.toolchains_only || 'false' }}
@@ -72,7 +72,7 @@ jobs:
 
   show_outputs:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true' && github.event_name != 'workflow_dispatch'
-    needs: scheduled_defaults
+    needs: [scheduled_defaults]
     runs-on: ubuntu-24.04-arm
     env:
       toolchains_only: ${{ needs.scheduled_defaults.outputs.toolchains_only }}
@@ -98,7 +98,7 @@ jobs:
       needs.scheduled_defaults.outputs.bypass_check == 'false' &&
       needs.scheduled_defaults.outputs.docker_only == 'false' &&
       needs.scheduled_defaults.outputs.toolchains_only == 'false'
-    needs: [skip_duplicate_job]
+    needs: [skip_duplicate_job, scheduled_defaults]
     concurrency:
       group: ci-check-new-releases
       cancel-in-progress: true
@@ -114,7 +114,7 @@ jobs:
       && needs.skip_duplicate_job.outputs.should_skip != 'true'
       && needs.ci-check-new-releases.outputs.build_new_release == 'true' ||
       ( needs.scheduled_defaults.outputs.docker_only == 'true' || needs.scheduled_defaults.outputs.toolchains_only == 'true' )
-    needs: [ci-check-new-releases]
+    needs: [skip_duplicate_job, scheduled_defaults, ci-check-new-releases]
     runs-on: ubuntu-24.04-arm
     outputs:
       mcm_build_matrix: ${{ steps.triples.outputs.mcm_build_matrix }}
@@ -138,7 +138,7 @@ jobs:
       needs.skip_duplicate_job.outputs.should_skip != 'true'
       && ( needs.ci-check-new-releases.outputs.build_new_release == 'true' ||
       needs.scheduled_defaults.outputs.docker_only != 'true' && needs.scheduled_defaults.outputs.toolchains_only != 'false' )
-    needs: [bootstrap-matrix]
+    needs: [skip_duplicate_job, scheduled_defaults, bootstrap-matrix]
     concurrency:
       group: ci-mcm-build
       cancel-in-progress: true
@@ -156,7 +156,7 @@ jobs:
       needs.skip_duplicate_job.outputs.should_skip != 'true'
       && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
       || needs.scheduled_defaults.outputs.docker_only != 'true' && needs.scheduled_defaults.outputs.toolchains_only != 'false' )
-    needs: [ci-mcm-build]
+    needs: [skip_duplicate_job, scheduled_defaults, ci-mcm-build]
     concurrency:
       group: ci-mcm-release
       cancel-in-progress: true
@@ -170,7 +170,8 @@ jobs:
       needs.skip_duplicate_job.outputs.should_skip != 'true'
       && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
       || needs.scheduled_defaults.outputs.docker_only != 'false' && needs.scheduled_defaults.outputs.toolchains_only != 'true' )
-    needs: [bootstrap-matrix, ci-mcm-release]
+    needs:
+      [skip_duplicate_job, scheduled_defaults, bootstrap-matrix, ci-mcm-release]
     concurrency:
       group: ci-docker-build
       cancel-in-progress: true
@@ -189,7 +190,13 @@ jobs:
       needs.skip_duplicate_job.outputs.should_skip != 'true'
       && ( needs.ci-check-new-releases.outputs.build_new_release == 'true'
       || needs.scheduled_defaults.outputs.docker_only != 'false' && needs.scheduled_defaults.outputs.toolchains_only != 'true' )
-    needs: [bootstrap-matrix, ci-docker-build]
+    needs:
+      [
+        skip_duplicate_job,
+        scheduled_defaults,
+        bootstrap-matrix,
+        ci-docker-build,
+      ]
     concurrency:
       group: ci-docker-test
       cancel-in-progress: true
@@ -204,6 +211,7 @@ jobs:
     needs:
       [
         skip_duplicate_job,
+        scheduled_defaults,
         bootstrap-matrix,
         ci-mcm-build,
         ci-mcm-release,
