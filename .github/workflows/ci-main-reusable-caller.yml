@@ -6,7 +6,7 @@ on:
       gnu_mirror_url:
         description: "Which GNU mirror to use?"
         required: true
-        default: "https://ftp.snt.utwente.nl/pub/software/gnu/"
+        default: "https://ftp.snt.utwente.nl/pub/software/gnu"
         type: string
       toolchains_only:
         description: "Only toolchain jobs"
