@@ -2,7 +2,11 @@ SOURCES = sources
 
 -include versions.mak
 
-GNU_SITE := $(if $(gnu_mirror_url),$(gnu_mirror_url),https://mirrors.dotsrc.org/gnu)
+ifdef gnu_mirror_url
+GNU_SITE := $(gnu_mirror_url)
+else
+GNU_SITE := https://mirrors.dotsrc.org/gnu
+endif
 GCC_SITE = $(GNU_SITE)/gcc
 BINUTILS_SITE = $(GNU_SITE)/binutils
 GMP_SITE = $(GNU_SITE)/gmp
