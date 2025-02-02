@@ -37,8 +37,8 @@ jobs:
 
       - name: cat versions.json versions.mak
         run: |
-            cat versions.json
-            cat versions.mak
+          cat versions.json
+          cat versions.mak
 
       - name: Host - update
         run: sudo apt-get update
@@ -48,7 +48,7 @@ jobs:
 
       - name: Host - Create docker multiarch container
         run: |
-          docker run --name ${container_name} -it -d -w /home/gh -v ${{ github.workspace }}:/home/gh ${matrix_alpine_prefix}/alpine:edge
+          docker run --name ${container_name} -it -d -e "GNU_MIRROR_URL=${gnu_mirror_url}" -w /home/gh -v ${{ github.workspace }}:/home/gh ${matrix_alpine_prefix}/alpine:edge
           docker exec ${container_name} sh -c 'adduser -h /home/gh -Ds /bin/bash -u 1001 gh && apk add sudo'
           docker exec ${container_name} sh -c 'printf "%s" "gh ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gh'
 
