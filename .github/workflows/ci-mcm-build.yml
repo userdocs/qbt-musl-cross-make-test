@@ -29,6 +29,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: test
+        run: |
+            cat versions.json
+            cat versions.mak
+            exit 1
+
       - name: Host - update
         run: sudo apt-get update
 
