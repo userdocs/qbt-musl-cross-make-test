@@ -9,11 +9,14 @@ on:
     outputs:
       build_new_release:
         value: ${{ jobs.check_release.outputs.build_new_release }}
+      gnu_mirror_url:
+        value: ${{ jobs.check_release.outputs.gnu_mirror_url }}
 
 jobs:
   check_release:
     outputs:
       build_new_release: ${{ steps.boot_strap_release.outputs.build_new_release }}
+      gnu_mirror_url: ${{ steps.boot_strap_release.outputs.gnu_mirror_url }}
     runs-on: ubuntu-24.04-arm
     env:
       GH_TOKEN: "${{ github.token}}"
@@ -39,6 +42,7 @@ jobs:
 
           # gnu_mirror_url="https://mirrors.dotsrc.org/gnu"
           gnu_mirror_url="https://ftp.snt.utwente.nl/pub/software/gnu/"
+          printf '%s' "gnu_mirror_url=https://ftp.snt.utwente.nl/pub/software/gnu/" >> $GITHUB_OUTPUT
 
           if curl -sLIo /dev/null --fail "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
               config_sub="$(git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,8) }')"

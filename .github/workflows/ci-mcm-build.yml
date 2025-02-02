@@ -7,6 +7,10 @@ on:
         description: "Json matrix for mcm build"
         required: true
         type: string
+      gnu_mirror_url:
+        description: "URL for GNU mirror"
+        required: true
+        type: string
 
 jobs:
   mcm-build:
@@ -22,6 +26,7 @@ jobs:
       matrix_triple_prefix: ${{ matrix.triple_prefix }}
       matrix_docker_platform: ${{ matrix.docker_platform }}
       container_name: mcm
+      gnu_mirror_url: ${{ inputs.gnu_mirror_url }}
 
     steps:
       - name: Checkout

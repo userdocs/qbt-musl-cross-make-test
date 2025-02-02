@@ -146,6 +146,7 @@ jobs:
     uses: ./.github/workflows/ci-mcm-build.yml
     with:
       mcm_build_matrix: ${{ needs.bootstrap-matrix.outputs.mcm_build_matrix }}
+      gnu_mirror_url: needs.ci-check-new-releases.outputs.gnu_mirror_url
 
   ci-mcm-release:
     if: >
