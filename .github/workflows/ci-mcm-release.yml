@@ -22,9 +22,7 @@ jobs:
           merge-multiple: true
 
       - name: set release info from versions.mak
-        run: |
-          cp -f versions.mak release_body.md
-          jq -R 'split(" = ") | {(.[0]):.[1]}' versions.mak | jq -s 'add' > versions.json
+        run: cp -f versions.mak release_body.md
 
       - name: set tag via date
         run: echo "github_tag=$(date +"%y%V")" >> $GITHUB_ENV
