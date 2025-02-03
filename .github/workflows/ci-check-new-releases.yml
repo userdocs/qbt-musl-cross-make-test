@@ -23,6 +23,9 @@ jobs:
       build_new_release: "false"
       bypass_check: ${{ inputs.bypass_check }}
       gnu_mirror_url: ${{ inputs.gnu_mirror_url }}
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
