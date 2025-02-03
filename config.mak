@@ -1,5 +1,5 @@
 FLAG = -g0 -O2 -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels -Wno-error
-STAT = -static --static
+STAT =
 
 COMMON_CONFIG += CC="gcc ${STAT}" CXX="g++ ${STAT}" CFLAGS="${FLAG}" CXXFLAGS="${FLAG}" LDFLAGS="-s ${STAT}"
 
