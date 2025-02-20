@@ -28,8 +28,6 @@ LINKER_FLAGS = \
 STATIC_FLAGS = -static -static-libgcc -static-libstdc++
 
 # Compiler configurations
-COMMON_CONFIG += CC="gcc ${STAT}"
-COMMON_CONFIG += CXX="g++ ${STAT}"
 COMMON_CONFIG += CFLAGS="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${STATIC_FLAGS}"
 COMMON_CONFIG += CXXFLAGS="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${STATIC_FLAGS} ${WARNING_FLAGS}"
 COMMON_CONFIG += CPPFLAGS="${PREPROCESSOR_FLAGS} ${WARNING_FLAGS}"
@@ -40,4 +38,5 @@ BINUTILS_CONFIG += --disable-gprofng
 
 # GCC configuration
 GCC_CONFIG += --enable-default-pie --enable-static-pie --enable-cet
+# GCC configuration for target - modified by workflow using triples.json
 GCC_CONFIG_FOR_TARGET +=
