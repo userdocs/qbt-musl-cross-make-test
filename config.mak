@@ -37,6 +37,6 @@ COMMON_CONFIG += LDFLAGS="${LINKER_FLAGS} ${STATIC_FLAGS}"
 BINUTILS_CONFIG += --disable-gprofng
 
 # GCC configuration
-GCC_CONFIG += --enable-default-pie --enable-static-pie --enable-cet
+GCC_CONFIG += --enable-default-pie --enable-static-pie --disable-cet
 # GCC configuration for target - modified by workflow using triples.json
 GCC_CONFIG_FOR_TARGET +=
