@@ -37,8 +37,11 @@ COMMON_CONFIG += LDFLAGS="${LINKER_FLAGS} ${STATIC_FLAGS}"
 
 # Binutils configuration
 BINUTILS_CONFIG += --disable-gprofng
+BINUTILS_CONFIG += --enable-default-pie
+BINUTILS_CONFIG += --disable-shared
 
 # GCC configuration
 GCC_CONFIG += --enable-default-pie --enable-static-pie
+GCC_CONFIG += --enable-pic --enable-targets=all --disable-shared
 # GCC configuration for target - modified by workflow using triples.json
-GCC_CONFIG_FOR_TARGET +=
+GCC_CONFIG_FOR_TARGET += --enable-default-pie --enable-static-pie --enable-pic --with-pic --disable-shared
