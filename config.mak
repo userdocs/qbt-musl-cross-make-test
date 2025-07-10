@@ -58,7 +58,7 @@ GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp
 GCC_CONFIG += --disable-libsanitizer --disable-gnu-indirect-function
 GCC_CONFIG += --disable-libmpx --disable-libatomic
 GCC_CONFIG += --enable-tls --enable-default-pie --enable-static-pie
-GCC_CONFIG += --enable-pic --disable-shared --enable-static
+GCC_CONFIG += --enable-pic --with-pic --disable-shared --enable-static
 GCC_CONFIG += --disable-libssp
 GCC_CONFIG += --enable-initfini-array
 GCC_CONFIG += --enable-libstdcxx-time=rt --enable-libstdcxx-time
@@ -69,5 +69,5 @@ GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --enable-languages=c,c++
 
-# GCC configuration for target - modified by workflow using triples.json
-GCC_CONFIG_FOR_TARGET += --enable-default-pie --enable-static-pie --enable-pic --with-pic --disable-shared
+# GCC configuration for target - modified by workflow or build-helper.bash using triples.json
+GCC_CONFIG_FOR_TARGET +=
