@@ -53,13 +53,21 @@ BINUTILS_CONFIG += --disable-plugins
 BINUTILS_CONFIG += --disable-multilib
 
 # GCC configuration
-GCC_CONFIG += --enable-default-pie --enable-static-pie
-GCC_CONFIG += --enable-pic --enable-targets=all --disable-shared
-GCC_CONFIG += --enable-static --disable-libssp
-GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp --disable-libsanitizer
-GCC_CONFIG += --disable-libquadmath --disable-libatomic
+GCC_CONFIG += --disable-bootstrap --disable-assembly --disable-werror
+GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp
+GCC_CONFIG += --disable-libsanitizer --disable-gnu-indirect-function
+GCC_CONFIG += --disable-libmpx --disable-libatomic
+GCC_CONFIG += --enable-tls --enable-default-pie --enable-static-pie
+GCC_CONFIG += --enable-pic --disable-shared --enable-static
+GCC_CONFIG += --disable-libssp
+GCC_CONFIG += --enable-initfini-array
+GCC_CONFIG += --enable-libstdcxx-time=rt --enable-libstdcxx-time
+GCC_CONFIG += --enable-deterministic-archives
+GCC_CONFIG += --enable-libquadmath --enable-libquadmath-support
+GCC_CONFIG += --disable-decimal-float
 GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --enable-languages=c,c++
+
 # GCC configuration for target - modified by workflow using triples.json
 GCC_CONFIG_FOR_TARGET += --enable-default-pie --enable-static-pie --enable-pic --with-pic --disable-shared

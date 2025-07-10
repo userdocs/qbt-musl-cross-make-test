@@ -23,11 +23,11 @@ MAKE += INFO_DEPS= infodir=
 MAKE += ac_cv_prog_lex_root=lex.yy
 MAKE += MAKEINFO=false
 
-FULL_BINUTILS_CONFIG = --target=$(TARGET) --with-sysroot=$(SYSROOT) \
+FULL_BINUTILS_CONFIG = --prefix= --libdir=/lib --target=$(TARGET) --with-sysroot=$(SYSROOT) \
 	$(COMMON_CONFIG) \
 	$(BINUTILS_CONFIG)
 
-FULL_GCC_CONFIG = --target=$(TARGET) --with-sysroot=$(SYSROOT) \
+FULL_GCC_CONFIG = --prefix= --libdir=/lib --target=$(TARGET) --with-sysroot=$(SYSROOT) \
 	$(COMMON_CONFIG) \
 	$(GCC_CONFIG) \
 	$(GCC_CONFIG_FOR_TARGET) # used with workflow and triples.json
