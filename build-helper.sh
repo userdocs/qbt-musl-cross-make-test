@@ -47,6 +47,19 @@ fi
 printf '\n%s\n' "target: ${target}"
 printf '%s\n\n' "config: ${target_config}"
 
+case "$(arch)" in
+	"x86_64")
+		docker_platform="amd64"
+		;;
+	"aarch64" | "")
+		docker_platform="arm64"
+		;;
+	*)
+		# Default case for unknown options
+		printf '%s\n' "Unknown option: ${2}"
+		;;
+esac
+
 # sed "s|GCC_CONFIG_FOR_TARGET +=|GCC_CONFIG_FOR_TARGET += ${matrix_arch_config}|" -i config.mak
 
 # sed "s|GCC_CONFIG_FOR_TARGET +=|GCC_CONFIG_FOR_TARGET += ${target_config}|" config.mak
@@ -56,7 +69,7 @@ printf '%s\n\n' "config: ${target_config}"
 printf '%s\n\n' "These are the target specific commands you can run manually:"
 
 printf '%s\n\n' "sed -i \"s|^GCC_CONFIG_FOR_TARGET +=.*|GCC_CONFIG_FOR_TARGET += ${target_config}|\" config.mak"
-printf '%s\n\n' "docker run -it -w /root -v $(pwd):/root alpine:edge"
+printf '%s\n\n' "docker run -it --platform=linux/${docker_platform} -w /root -v $(pwd):/root alpine:edge"
 printf '%s\n' "apk add -u --no-cache autoconf automake bash bison build-base \ "
 printf '%s\n' "curl findutils flex git libarchive-tools libtool linux-headers \ "
 printf '%s\n\n' "patch perl pkgconf rsync tar texinfo xz zip "
@@ -69,11 +82,13 @@ printf '%s\n\n' "./build-helper.sh target build"
 
 if [[ "${2}" == "build" ]]; then
 	sed -i "s|^GCC_CONFIG_FOR_TARGET +=.*|GCC_CONFIG_FOR_TARGET += ${target_config}|" config.mak
-	docker run -it -w /root -v "$(pwd)":/root alpine:edge /bin/sh -c "docker run -it -v $(pwd):/root alpine:edge
-		apk add -u --no-cache autoconf automake bash bison build-base \
-		curl findutils flex git libarchive-tools libtool linux-headers \
-		patch perl pkgconf rsync tar texinfo xz zip \
-		make -j$(nproc) install TARGET=\"${target}\" OUTPUT=\"build/${target}\" \
-		cd \"build\ \
-		XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
+	docker run -it --platform=linux/${docker_platform} -w /root -v "$(pwd)":/root alpine:edge /bin/sh -c "
+    apk update && \
+    apk add -u --no-cache autoconf automake bash bison build-base \
+        curl findutils flex git libarchive-tools libtool linux-headers \
+        patch perl pkgconf rsync tar texinfo xz zip && \
+    make -j\$(nproc) install TARGET=\"${target}\" OUTPUT=\"build/${target}\" && \
+    cd \"build\" && \
+    XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
+
 fi
