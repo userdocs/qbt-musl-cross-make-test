@@ -8,7 +8,6 @@ PREPROCESSOR_FLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
 SECURITY_FLAGS = \
     -fstack-clash-protection \
     -fstack-protector-strong \
-    -fno-plt \
     -fno-delete-null-pointer-checks \
     -fno-strict-overflow \
     -fno-strict-aliasing \
@@ -21,27 +20,41 @@ WARNING_FLAGS = -w
 # Linker Flags
 LINKER_FLAGS = \
     -pthread \
-    -s \
-    -Wl,-O1,--as-needed,--sort-common,-z,nodlopen,-z,noexecstack,-z,now,-z,pack-relative-relocs,-z,relro,-z,max-page-size=65536,--no-copy-dt-needed-entries
+    -Wl,-s \
+    -Wl,-O1,--as-needed,--sort-common,-z,noexecstack,-z,now,-z,relro,-z,max-page-size=65536,--no-copy-dt-needed-entries
 
 # Static Linking Flags
-STATIC_FLAGS = -static --static
+STATIC_FLAGS = -static
+STATIC_LDFLAGS = -static
+
+# Toolchain Build Flags (for building the toolchain itself statically)
+TOOLCHAIN_STATIC_FLAGS = -static -static-libgcc -static-libstdc++
 
 # Compiler configurations
-COMMON_CONFIG += CC="gcc ${STATIC_FLAGS}"
-COMMON_CONFIG += CXX="g++ ${STATIC_FLAGS}"
+COMMON_CONFIG += CC="gcc"
+COMMON_CONFIG += CXX="g++"
 COMMON_CONFIG += CFLAGS="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${STATIC_FLAGS}"
 COMMON_CONFIG += CXXFLAGS="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${STATIC_FLAGS} ${WARNING_FLAGS}"
 COMMON_CONFIG += CPPFLAGS="${PREPROCESSOR_FLAGS} ${WARNING_FLAGS}"
-COMMON_CONFIG += LDFLAGS="${LINKER_FLAGS} ${STATIC_FLAGS}"
+COMMON_CONFIG += LDFLAGS="${LINKER_FLAGS} ${STATIC_LDFLAGS}"
+
+# Host toolchain flags (for building the cross-compiler itself)
+COMMON_CONFIG += CFLAGS_FOR_HOST="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${TOOLCHAIN_STATIC_FLAGS}"
+COMMON_CONFIG += CXXFLAGS_FOR_HOST="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${TOOLCHAIN_STATIC_FLAGS} ${WARNING_FLAGS}"
+COMMON_CONFIG += LDFLAGS_FOR_HOST="${LINKER_FLAGS} ${TOOLCHAIN_STATIC_FLAGS}"
 
 # Binutils configuration
 BINUTILS_CONFIG += --disable-gprofng
 BINUTILS_CONFIG += --enable-default-pie
 BINUTILS_CONFIG += --disable-shared
+BINUTILS_CONFIG += --enable-static
+BINUTILS_CONFIG += --disable-plugins
 
 # GCC configuration
 GCC_CONFIG += --enable-default-pie --enable-static-pie
 GCC_CONFIG += --enable-pic --enable-targets=all --disable-shared
+GCC_CONFIG += --enable-static --disable-libssp
+GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
+GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 # GCC configuration for target - modified by workflow using triples.json
 GCC_CONFIG_FOR_TARGET += --enable-default-pie --enable-static-pie --enable-pic --with-pic --disable-shared
