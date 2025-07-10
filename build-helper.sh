@@ -83,12 +83,12 @@ printf '%s\n\n' "./build-helper.sh target build"
 if [[ "${2}" == "build" ]]; then
 	sed -i "s|^GCC_CONFIG_FOR_TARGET +=.*|GCC_CONFIG_FOR_TARGET += ${target_config}|" config.mak
 	docker run -it --platform=linux/${docker_platform} -w /root -v "$(pwd)":/root alpine:edge /bin/sh -c "
-    apk update && \
-    apk add -u --no-cache autoconf automake bash bison build-base \
-        curl findutils flex git libarchive-tools libtool linux-headers \
-        patch perl pkgconf rsync tar texinfo xz zip && \
-    make -j\$(nproc) install TARGET=\"${target}\" OUTPUT=\"build/${target}\" && \
-    cd \"build\" && \
-    XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
-
+        apk update && \
+        apk add -u --no-cache autoconf automake bash bison build-base \
+            curl findutils flex git libarchive-tools libtool linux-headers \
+            patch perl pkgconf rsync tar texinfo xz zip && \
+        git config --global --add safe.directory '*' && \
+        make -j\$(nproc) install TARGET=\"${target}\" OUTPUT=\"build/${target}\" && \
+        cd \"build\" && \
+        XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
 fi
