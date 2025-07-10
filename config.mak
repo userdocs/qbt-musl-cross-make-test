@@ -31,6 +31,7 @@ STATIC_LDFLAGS = -static
 TOOLCHAIN_STATIC_FLAGS = -static -static-libgcc -static-libstdc++
 
 # Compiler configurations
+COMMON_CONFIG += --prefix= --libdir=/lib
 COMMON_CONFIG += CC="gcc"
 COMMON_CONFIG += CXX="g++"
 COMMON_CONFIG += CFLAGS="${OPTIMIZATION_FLAGS} ${SECURITY_FLAGS} ${STATIC_FLAGS}"
@@ -59,5 +60,6 @@ GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp
 GCC_CONFIG += --disable-libquadmath --disable-libatomic
 GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
+GCC_CONFIG += --enable-languages=c,c++
 # GCC configuration for target - modified by workflow using triples.json
 GCC_CONFIG_FOR_TARGET += --enable-default-pie --enable-static-pie --enable-pic --with-pic --disable-shared
