@@ -56,15 +56,10 @@ case "$(arch)" in
 		;;
 	*)
 		# Default case for unknown options
-		printf '%s\n' "Unknown option: ${2}"
+		printf '%s\n' "Unsupported build host: ${2}"
+		exit 1
 		;;
 esac
-
-# sed "s|GCC_CONFIG_FOR_TARGET +=|GCC_CONFIG_FOR_TARGET += ${matrix_arch_config}|" -i config.mak
-
-# sed "s|GCC_CONFIG_FOR_TARGET +=|GCC_CONFIG_FOR_TARGET += ${target_config}|" config.mak
-
-#make -j"$(nproc)" install TARGET="${1}" OUTPUT="/home/gh/build/${matrix_arch_type}"
 
 printf '%s\n\n' "These are the target specific commands you can run manually:"
 
