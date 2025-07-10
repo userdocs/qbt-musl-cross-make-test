@@ -1,5 +1,5 @@
 # Optimization Flags
-OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections -pthread
+OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections
 
 # Preprocessor Flags
 PREPROCESSOR_FLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
@@ -49,11 +49,14 @@ BINUTILS_CONFIG += --enable-default-pie
 BINUTILS_CONFIG += --disable-shared
 BINUTILS_CONFIG += --enable-static
 BINUTILS_CONFIG += --disable-plugins
+BINUTILS_CONFIG += --disable-multilib
 
 # GCC configuration
 GCC_CONFIG += --enable-default-pie --enable-static-pie
 GCC_CONFIG += --enable-pic --enable-targets=all --disable-shared
 GCC_CONFIG += --enable-static --disable-libssp
+GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp
+GCC_CONFIG += --disable-libquadmath --disable-libatomic
 GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 # GCC configuration for target - modified by workflow using triples.json
