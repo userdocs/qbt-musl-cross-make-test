@@ -96,8 +96,9 @@ GCC_CONFIG += --with-linker-hash-style=gnu
 GCC_CONFIG += --disable-plugin
 GCC_CONFIG += --disable-lto
 GCC_CONFIG += --with-system-zlib
-GCC_CONFIG += --enable-libstdcxx-filesystem-ts
+GCC_CONFIG += --disable-libstdcxx-filesystem-ts
 GCC_CONFIG += --disable-libstdcxx-dual-abi
+GCC_CONFIG += --disable-c++tools
 
 # GCC configuration for target - modified by workflow or build-helper.bash using triples.json
 GCC_CONFIG_FOR_TARGET +=
