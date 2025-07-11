@@ -21,3 +21,30 @@ jobs:
         env:
           arch_type: ${{ matrix.arch_type }}
         run: file /usr/local/bin/${arch_type}-gcc
+
+      - name: gcc -v
+        env:
+          arch_type: ${{ matrix.arch_type }}
+        run: /usr/local/bin/${arch_type}-gcc -v
+
+      - name: Create Hello World source
+        run: |
+          cat > hello.c << 'EOF'
+          #include <stdio.h>
+          int main() {
+              printf("Hello World!\n");
+              return 0;
+          }
+          EOF
+
+      - name: Compile static Hello World binary
+        env:
+          arch_type: ${{ matrix.arch_type }}
+        run: |
+          gcc -static -o hello hello.c
+
+      - name: file hello
+        run: file ./hello
+
+      - name: Test Hello World binary
+        run: ./hello
