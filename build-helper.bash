@@ -83,7 +83,7 @@ if [[ "${2}" == "build" ]]; then
             curl findutils flex git libarchive-tools libtool linux-headers \
             patch perl pkgconf rsync tar texinfo xz zip && \
         git config --global --add safe.directory '*' && \
-        make -j\$(nproc) install TARGET=\"${target}\" OUTPUT=\"build/${target}\" && \
+        make -j\$(nproc) install TARGET=\"${target}\" OUTPUT=\"/root/build/${target}\" && \
         cd \"build\" && \
         XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
 fi
