@@ -12,7 +12,7 @@ ISL_SITE = https://libisl.sourceforge.io
 MUSL_SITE = https://musl.libc.org/releases
 MUSL_REPO = git://git.musl-libc.org/musl
 LINUX_SITE = https://cdn.kernel.org/pub/linux/kernel
-CONFIG_SUB_URL=""https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=$(CONFIG_SUB_REV)"
+CONFIG_SUB_URL = https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=$(CONFIG_SUB_REV)
 
 DL_CMD = curl -sL4 --connect-timeout 5 --retry 5 --retry-delay 5 --retry-max-time 25 -o
 SHA1_CMD = sha1sum -c
@@ -63,24 +63,24 @@ $(SOURCES):
 	mkdir -p $@
 
 $(SOURCES)/config.sub: | $(SOURCES)
-    mkdir -p $@.tmp
-    use_local=false; \
-    if test -f $(CURDIR)/config.sub; then \
-        cd $(CURDIR) && if $(SHA1_CMD) hashes/$(notdir $@).$(CONFIG_SUB_REV).sha1 2>/dev/null; then \
-            echo "Using local config.sub (SHA1 verified) matching $(CONFIG_SUB_REV)"; \
-            cp config.sub $@.tmp/$(notdir $@); \
-            use_local=true; \
-        else \
-            echo "Local config.sub SHA1 mismatch, downloading..."; \
-        fi; \
-    fi; \
-    if [ "$$use_local" = "false" ]; then \
-        cd $@.tmp && $(DL_CMD) $(notdir $@) $(CONFIG_SUB_URL); \
-    fi
-    cd $@.tmp && touch $(notdir $@)
-    cd $@.tmp && $(SHA1_CMD) $(CURDIR)/hashes/$(notdir $@).$(CONFIG_SUB_REV).sha1
-    mv $@.tmp/$(notdir $@) $@
-    rm -rf $@.tmp
+	mkdir -p $@.tmp
+	use_local=false; \
+	if test -f $(CURDIR)/config.sub; then \
+		cd $(CURDIR) && if $(SHA1_CMD) hashes/$(notdir $@).$(CONFIG_SUB_REV).sha1 2>/dev/null; then \
+			echo "Using local config.sub (SHA1 verified) matching $(CONFIG_SUB_REV)"; \
+			cp config.sub $@.tmp/$(notdir $@); \
+			use_local=true; \
+		else \
+			echo "Local config.sub SHA1 mismatch, downloading..."; \
+		fi; \
+	fi; \
+	if [ "$$use_local" = "false" ]; then \
+		cd $@.tmp && $(DL_CMD) $(notdir $@) $(CONFIG_SUB_URL); \
+	fi
+	cd $@.tmp && touch $(notdir $@)
+	cd $@.tmp && $(SHA1_CMD) $(CURDIR)/hashes/$(notdir $@).$(CONFIG_SUB_REV).sha1
+	mv $@.tmp/$(notdir $@) $@
+	rm -rf $@.tmp
 
 $(SOURCES)/%: hashes/%.sha1 | $(SOURCES)
 	mkdir -p $@.tmp
