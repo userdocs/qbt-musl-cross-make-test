@@ -47,7 +47,7 @@ jobs:
 
       - name: bootstrap
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run --pull always -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
           echo "--- Checking env ---" &&
           env &&
           echo "--- Checking compiler ---" &&
