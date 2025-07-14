@@ -42,9 +42,6 @@ jobs:
           pattern: qbt-mcm-source-files
           merge-multiple: true
 
-      - name: ls sources
-        run: ls -la sources/*
-
       - name: cat versions.json versions.mak
         run: |
           cat versions.json
@@ -61,15 +58,6 @@ jobs:
           docker run --name ${container_name} -it -d -e "GNU_MIRROR_URL=${gnu_mirror_url}" -w /home/gh -v ${{ github.workspace }}:/home/gh ${matrix_alpine_prefix}/alpine:edge
           docker exec ${container_name} sh -c 'adduser -h /home/gh -Ds /bin/bash -u 1001 gh && apk add sudo'
           docker exec ${container_name} sh -c 'printf "%s" "gh ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gh'
-
-      - name: Docker - ls
-        run: |
-          printf '\n%s\n\n' "ls"
-          docker exec ${container_name} ls
-          printf '\n%s\n\n' "ls -la"
-          docker exec ${container_name} ls -la
-          printf '\n%s\n\n' "ls -la sources"
-          docker exec ${container_name} ls -la sources
 
       - name: Docker - apk update
         run: docker exec ${container_name} apk update
@@ -88,16 +76,6 @@ jobs:
 
       - name: Docker - install ${{ matrix.arch_type }} toolchain
         run: docker exec -u gh:gh ${container_name} make -j"$(nproc)" install TARGET="${matrix_arch_type}" OUTPUT="/home/gh/build/${matrix_arch_type}"
-
-      - name: Docker - ls
-        if: cancelled()
-        run: |
-          printf '\n%s\n\n' "ls"
-          docker exec ${container_name} ls
-          printf '\n%s\n\n' "ls -la"
-          docker exec ${container_name} ls -la
-          printf '\n%s\n\n' "ls -la sources"
-          docker exec ${container_name} ls -la sources
 
       - name: Host - archive ${{ matrix.arch_type }} toolchain
         run: |
