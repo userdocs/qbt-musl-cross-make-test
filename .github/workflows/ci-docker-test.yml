@@ -26,7 +26,7 @@ jobs:
           echo "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
 
   docker-test:
-    needs: ${{ github.event_name == 'workflow_dispatch' && 'bootstrap-matrix' || '' }}
+    needs: [bootstrap-matrix]
     permissions:
       contents: read
     env:
