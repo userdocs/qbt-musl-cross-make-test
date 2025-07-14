@@ -38,7 +38,7 @@ jobs:
       - name: Host - Download source artifacts
         uses: actions/download-artifact@v4
         with:
-          path: "sources"
+          path: ${{ github.workspace }}/sources
           pattern: qbt-mcm-source-files
 
       - name: ls sources
@@ -60,6 +60,12 @@ jobs:
           docker run --name ${container_name} -it -d -e "GNU_MIRROR_URL=${gnu_mirror_url}" -w /home/gh -v ${{ github.workspace }}:/home/gh ${matrix_alpine_prefix}/alpine:edge
           docker exec ${container_name} sh -c 'adduser -h /home/gh -Ds /bin/bash -u 1001 gh && apk add sudo'
           docker exec ${container_name} sh -c 'printf "%s" "gh ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gh'
+
+      - name: Docker - ls
+        run: |
+          docker exec ${container_name} ls
+          docker exec ${container_name} ls -la
+          docker exec ${container_name} ls -la sources
 
       - name: Docker - apk update
         run: docker exec ${container_name} apk update
