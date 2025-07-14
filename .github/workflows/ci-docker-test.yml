@@ -46,6 +46,8 @@ jobs:
       - name: bootstrap
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Checking env ---" &&
+          env &&
           echo "--- Checking compiler ---" &&
           file /usr/local/bin/${arch_type}-gcc &&
           echo "--- Checking compiler symlinks work ---" &&
