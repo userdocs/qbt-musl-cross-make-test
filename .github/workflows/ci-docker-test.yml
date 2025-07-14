@@ -99,14 +99,14 @@ jobs:
 
               // Simple compression test
               const char* input = "Hello from zlib-ng!";
-              uLongf input_len = strlen(input);
-              uLongf compressed_len = zng_compressBound(input_len);
+              size_t input_len = strlen(input);
+              size_t compressed_len = zng_compressBound(input_len);
 
-              Bytef* compressed = malloc(compressed_len);
+              uint8_t* compressed = malloc(compressed_len);
 
-              if (zng_compress(compressed, &compressed_len, (const Bytef*)input, input_len) == Z_OK) {
-                  printf("Original size: %lu bytes\n", input_len);
-                  printf("Compressed size: %lu bytes\n", compressed_len);
+              if (zng_compress(compressed, &compressed_len, (const uint8_t*)input, input_len) == Z_OK) {
+                  printf("Original size: %zu bytes\n", input_len);
+                  printf("Compressed size: %zu bytes\n", compressed_len);
                   printf("Compression ratio: %.2f%%\n",
                         100.0 - (100.0 * compressed_len / input_len));
               }
@@ -120,7 +120,8 @@ jobs:
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
           echo "--- Building deps ---" &&
-          git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git && cd /root/zlib-ng &&
+          git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git &&
+          cd /root/zlib-ng &&
           cmake -G Ninja -B build -D BUILD_SHARED_LIBS=OFF -D WITH_GTEST=OFF -D CMAKE_INSTALL_PREFIX=/root/z && cmake --build build && cmake --install build &&
           cd /root && ls -la &&
           echo "--- Compiling binary ---" &&
