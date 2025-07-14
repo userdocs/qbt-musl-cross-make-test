@@ -47,7 +47,7 @@ jobs:
 
       - name: bootstrap
         run: >
-          docker run --pull always -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run --pull always -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Checking env ---" &&
           env &&
           echo "--- Checking compiler ---" &&
@@ -57,7 +57,7 @@ jobs:
 
       - name: Run cross-arch container gcc info
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Checking compiler ---" &&
           file /usr/local/bin/${arch_type}-gcc &&
           /usr/local/bin/gcc -v'
@@ -75,13 +75,13 @@ jobs:
 
       - name: Run cross-arch container gcc build hello.c
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Compiling binary ---" &&
           gcc -static -o hello hello.c'
 
       - name: Run cross-arch container qemu run
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Checking binary type ---" &&
           file ./hello &&
 
@@ -122,7 +122,7 @@ jobs:
 
       - name: Run cross container gcc build hello_zlib-ng
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Building deps ---" &&
           git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git &&
           cd /root/zlib-ng &&
@@ -133,7 +133,7 @@ jobs:
 
       - name: Run cross-arch container qemu run
         run: >
-          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/${{ github.repo }}:${arch_type} bash -c '
           echo "--- Checking binary type ---" &&
           file ./hello_zlib-ng &&
 
