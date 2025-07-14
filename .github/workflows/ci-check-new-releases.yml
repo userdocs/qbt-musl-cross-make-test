@@ -165,3 +165,16 @@ jobs:
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
             } || echo "No changes detected"
           fi
+
+      - name: summaries
+        run: |
+          printf '%b\n' "# Versions Outputs Summary" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "CONFIG_SUB_REV: ${remote_versions[CONFIG_SUB_REV]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "GCC_VER": ${remote_versions[GCC_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "BINUTILS_VER": ${remote_versions[BINUTILS_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "MUSL_VER": ${remote_versions[MUSL_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "GMP_VER": ${remote_versions[GMP_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "MPC_VER": ${remote_versions[MPC_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "MPFR_VER": ${remote_versions[MPFR_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "LINUX_VER": ${remote_versions[LINUX_VER]}" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "ISL_VER": ${remote_versions[ISL_VER]}" >> $GITHUB_STEP_SUMMARY
