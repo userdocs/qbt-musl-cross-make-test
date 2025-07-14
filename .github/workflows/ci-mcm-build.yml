@@ -64,11 +64,11 @@ jobs:
 
       - name: Docker - ls
         run: |
-          print '\n%s\n\n' "ls"
+          printf '\n%s\n\n' "ls"
           docker exec ${container_name} ls
-          print '\n%s\n\n' "ls -la"
+          printf '\n%s\n\n' "ls -la"
           docker exec ${container_name} ls -la
-          print '\n%s\n\n' "ls -la sources"
+          printf '\n%s\n\n' "ls -la sources"
           docker exec ${container_name} ls -la sources
 
       - name: Docker - apk update
@@ -92,11 +92,11 @@ jobs:
       - name: Docker - ls
         if: cancelled()
         run: |
-          print '\n%s\n\n' "ls"
+          printf '\n%s\n\n' "ls"
           docker exec ${container_name} ls
-          print '\n%s\n\n' "ls -la"
+          printf '\n%s\n\n' "ls -la"
           docker exec ${container_name} ls -la
-          print '\n%s\n\n' "ls -la sources"
+          printf '\n%s\n\n' "ls -la sources"
           docker exec ${container_name} ls -la sources
 
       - name: Host - archive ${{ matrix.arch_type }} toolchain
