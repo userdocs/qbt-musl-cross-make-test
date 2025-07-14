@@ -113,9 +113,10 @@ jobs:
       - name: Run cross container gcc build hello_openssl
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
-          echo "--- Compiling binary ---" &&
+          echo "--- Installing deps ---" &&
           apk update && apk add openssl-libs-static openssl-dev &&
-          gcc -static -o hello_openssl hello_openssl.c -lssl -lcrypto'
+          echo "--- Compiling binary ---" &&
+          gcc -static -o hello_openssl hello_openssl.c -L/usr/lib -lssl -lcrypto'
 
       - name: Run cross-arch container qemu run
         run: >
