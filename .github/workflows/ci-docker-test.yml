@@ -11,6 +11,8 @@ on:
 
 jobs:
   docker-test:
+    permissions:
+      contents: read
     env:
       arch_type: ${{ matrix.arch_type }}
     runs-on: ${{ matrix.build_host }}
