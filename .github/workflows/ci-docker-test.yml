@@ -89,20 +89,22 @@ jobs:
           echo "--- Creating source file ---"
           cat > hello_zlib-ng.c << 'EOF'
           #include <stdio.h>
-          #include <zlib.h>
+          #include <stdlib.h>
+          #include <string.h>
+          #include <zlib-ng.h>
 
           int main() {
               printf("Hello, World!\n");
-              printf("zlib-ng version: %s\n", zlibVersion());
+              printf("zlib-ng version: %s\n", zlibng_version());
 
               // Simple compression test
               const char* input = "Hello from zlib-ng!";
               uLongf input_len = strlen(input);
-              uLongf compressed_len = compressBound(input_len);
+              uLongf compressed_len = zng_compressBound(input_len);
 
               Bytef* compressed = malloc(compressed_len);
 
-              if (compress(compressed, &compressed_len, (const Bytef*)input, input_len) == Z_OK) {
+              if (zng_compress(compressed, &compressed_len, (const Bytef*)input, input_len) == Z_OK) {
                   printf("Original size: %lu bytes\n", input_len);
                   printf("Compressed size: %lu bytes\n", compressed_len);
                   printf("Compression ratio: %.2f%%\n",
@@ -121,7 +123,7 @@ jobs:
           git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git && cd /root/zlib-ng &&
           cmake -G Ninja -B build -D BUILD_SHARED_LIBS=OFF -D WITH_GTEST=OFF -D CMAKE_INSTALL_PREFIX=/root/z && cmake --build build && cmake --install build &&
           echo "--- Compiling binary ---" &&
-          gcc -static -o hello_zlib-ng hello_zlib-ng.c -I/root/z/include -L/root/z/lib -lz'
+          gcc -static -o hello_zlib-ng hello_zlib-ng.c -I/root/z/include -L/root/z/lib -lz-ng'
 
       - name: Run cross-arch container qemu run
         run: >
