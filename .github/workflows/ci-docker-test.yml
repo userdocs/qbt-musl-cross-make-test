@@ -21,10 +21,16 @@ jobs:
       matrix: ${{ fromJSON(inputs.docker_test_matrix) }}
 
     steps:
-      - name: Register QEMU emulators
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
+      # - name: Register QEMU emulators
+      #   uses: docker/setup-qemu-action@v3
+      #   with:
+      #     platforms: all
+
+      - name: Host - update
+        run: sudo apt-get update
+
+      - name: Host - set up qemu-user-static binfmt-support
+        run: sudo apt install qemu-user-static binfmt-support
 
       - name: create test file
         run: |
