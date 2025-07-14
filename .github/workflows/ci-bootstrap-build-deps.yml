@@ -31,3 +31,7 @@ jobs:
         with:
           name: qbt-mcm-source-files
           path: "sources/*"
+
+      - name: summaries
+        run: |
+          ls -la sources/* >> $GITHUB_STEP_SUMMARY
