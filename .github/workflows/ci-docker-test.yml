@@ -116,7 +116,7 @@ jobs:
           echo "--- Installing deps ---" &&
           apk update && apk add openssl-libs-static openssl-dev &&
           echo "--- Compiling binary ---" &&
-          gcc -static -o hello_openssl hello_openssl.c -L/usr/lib -lssl -lcrypto'
+          gcc -static -o hello_openssl hello_openssl.c -I/usr/include -L/usr/lib -lssl -lcrypto'
 
       - name: Run cross-arch container qemu run
         run: >
