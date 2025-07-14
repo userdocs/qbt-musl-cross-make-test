@@ -1,6 +1,7 @@
 name: ci - docker-test
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       docker_test_matrix:
@@ -10,25 +11,22 @@ on:
 
 jobs:
   docker-test:
+    env:
+      arch_type: ${{ matrix.arch_type }}
     runs-on: ${{ matrix.build_host }}
-    container: ghcr.io/userdocs/qbt-musl-cross-make:${{ matrix.arch_type }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.docker_test_matrix) }}
 
     steps:
-      - name: file gcc
-        env:
-          arch_type: ${{ matrix.arch_type }}
-        run: file /usr/local/bin/${arch_type}-gcc
+      - name: Register QEMU emulators
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
 
-      - name: gcc -v
-        env:
-          arch_type: ${{ matrix.arch_type }}
-        run: /usr/local/bin/${arch_type}-gcc -v
-
-      - name: Create Hello World source
+      - name: create test file
         run: |
+          echo "--- Creating source file ---"
           cat > hello.c << 'EOF'
           #include <stdio.h>
           int main() {
@@ -37,14 +35,32 @@ jobs:
           }
           EOF
 
-      - name: Compile static Hello World binary
-        env:
-          arch_type: ${{ matrix.arch_type }}
-        run: |
-          gcc -static -o hello hello.c
+      - name: bootstrap
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Checking compiler ---" &&
+          file /usr/local/bin/${arch_type}-gcc &&
+          echo "--- Checking compiler symlinks work ---" &&
+          /usr/local/bin/gcc -v'
 
-      - name: file hello
-        run: file ./hello
+      - name: Run cross-arch container gcc info
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Checking compiler ---" &&
+          file /usr/local/bin/${arch_type}-gcc &&
+          /usr/local/bin/gcc -v'
 
-      - name: Test Hello World binary
-        run: ./hello
+      - name: Run cross-arch container gcc build
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Compiling binary ---" &&
+          gcc -static -o hello hello.c'
+
+      - name: Run cross-arch container qemu run
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Checking binary type ---" &&
+          file ./hello &&
+
+          echo "--- Running binary ---" &&
+          ./hello'
