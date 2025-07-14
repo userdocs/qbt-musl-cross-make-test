@@ -122,6 +122,7 @@ jobs:
           echo "--- Building deps ---" &&
           git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git && cd /root/zlib-ng &&
           cmake -G Ninja -B build -D BUILD_SHARED_LIBS=OFF -D WITH_GTEST=OFF -D CMAKE_INSTALL_PREFIX=/root/z && cmake --build build && cmake --install build &&
+          cd /root && ls -la &&
           echo "--- Compiling binary ---" &&
           gcc -static -o hello_zlib-ng hello_zlib-ng.c -I/root/z/include -L/root/z/lib -lz-ng'
 
