@@ -10,6 +10,21 @@ on:
         type: string
 
 jobs:
+  bootstrap-matrix:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      docker_test_matrix: ${{ steps.triples.outputs.docker_test_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: bootstrap the matrix
+        id: triples
+        run: |
+          echo "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
+
   docker-test:
     permissions:
       contents: read
@@ -18,30 +33,14 @@ jobs:
     runs-on: ${{ matrix.build_host }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.docker_test_matrix) }}
+      matrix: ${{ fromJSON(inputs.docker_test_matrix || needs.bootstrap-matrix.outputs.docker_test_matrix) }}
 
     steps:
-      # - name: Register QEMU emulators
-      #   uses: docker/setup-qemu-action@v3
-      #   with:
-      #     platforms: all
-
       - name: Host - update
         run: sudo apt-get update
 
       - name: Host - set up qemu-user-static binfmt-support
         run: sudo apt install qemu-user-static binfmt-support
-
-      - name: create test file
-        run: |
-          echo "--- Creating source file ---"
-          cat > hello.c << 'EOF'
-          #include <stdio.h>
-          int main() {
-              printf("Hello World!\n");
-              return 0;
-          }
-          EOF
 
       - name: bootstrap
         run: >
@@ -58,7 +57,18 @@ jobs:
           file /usr/local/bin/${arch_type}-gcc &&
           /usr/local/bin/gcc -v'
 
-      - name: Run cross-arch container gcc build
+      - name: create test hello.c
+        run: |
+          echo "--- Creating source file ---"
+          cat > hello.c << 'EOF'
+          #include <stdio.h>
+          int main() {
+              printf("Hello World!\n");
+              return 0;
+          }
+          EOF
+
+      - name: Run cross-arch container gcc build hello.c
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
           echo "--- Compiling binary ---" &&
@@ -72,3 +82,45 @@ jobs:
 
           echo "--- Running binary ---" &&
           ./hello'
+
+      - name: create test hello_openssl.c
+        run: |
+          echo "--- Creating source file ---"
+          cat > hello.c << 'EOF'
+          #include <stdio.h>
+          #include <openssl/ssl.h>
+          #include <openssl/err.h>
+          #include <openssl/evp.h>
+
+          int main() {
+              // Initialize OpenSSL
+              SSL_library_init();
+              SSL_load_error_strings();
+              OpenSSL_add_all_algorithms();
+
+              printf("Hello, World!\n");
+              printf("OpenSSL version: %s\n", OpenSSL_version(OPENSSL_VERSION));
+
+              // Cleanup
+              EVP_cleanup();
+              ERR_free_strings();
+
+              return 0;
+          }
+          EOF
+
+      - name: Run cross container gcc build hello_openssl
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Compiling binary ---" &&
+          apk update && apk add openssl-libs-static openssl-dev &&
+          gcc -static -o hello_openssl hello_openssl.c -lssl -lcrypto'
+
+      - name: Run cross-arch container qemu run
+        run: >
+          docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
+          echo "--- Checking binary type ---" &&
+          file ./hello_openssl &&
+
+          echo "--- Running binary ---" &&
+          ./hello_openssl'
