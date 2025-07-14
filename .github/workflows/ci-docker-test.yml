@@ -87,7 +87,7 @@ jobs:
       - name: create test hello_openssl.c
         run: |
           echo "--- Creating source file ---"
-          cat > hello.c << 'EOF'
+          cat > hello_openssl.c << 'EOF'
           #include <stdio.h>
           #include <openssl/ssl.h>
           #include <openssl/err.h>
