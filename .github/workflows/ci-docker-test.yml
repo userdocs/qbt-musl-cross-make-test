@@ -84,45 +84,50 @@ jobs:
           echo "--- Running binary ---" &&
           ./hello'
 
-      - name: create test hello_openssl.c
+      - name: create test hello_zlib-ng.c
         run: |
           echo "--- Creating source file ---"
-          cat > hello_openssl.c << 'EOF'
+          cat > hello_zlib-ng.c << 'EOF'
           #include <stdio.h>
-          #include <openssl/ssl.h>
-          #include <openssl/err.h>
-          #include <openssl/evp.h>
+          #include <zlib.h>
 
           int main() {
-              // Initialize OpenSSL
-              SSL_library_init();
-              SSL_load_error_strings();
-              OpenSSL_add_all_algorithms();
-
               printf("Hello, World!\n");
-              printf("OpenSSL version: %s\n", OpenSSL_version(OPENSSL_VERSION));
+              printf("zlib-ng version: %s\n", zlibVersion());
 
-              // Cleanup
-              EVP_cleanup();
-              ERR_free_strings();
+              // Simple compression test
+              const char* input = "Hello from zlib-ng!";
+              uLongf input_len = strlen(input);
+              uLongf compressed_len = compressBound(input_len);
 
+              Bytef* compressed = malloc(compressed_len);
+
+              if (compress(compressed, &compressed_len, (const Bytef*)input, input_len) == Z_OK) {
+                  printf("Original size: %lu bytes\n", input_len);
+                  printf("Compressed size: %lu bytes\n", compressed_len);
+                  printf("Compression ratio: %.2f%%\n",
+                        100.0 - (100.0 * compressed_len / input_len));
+              }
+
+              free(compressed);
               return 0;
           }
           EOF
 
-      - name: Run cross container gcc build hello_openssl
+      - name: Run cross container gcc build hello_zlib-ng
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
-          echo "--- Installing deps ---" &&
-          apk update && apk add openssl-libs-static openssl-dev &&
+          echo "--- Building deps ---" &&
+          git clone --depth 1 https://github.com/zlib-ng/zlib-ng.git && cd /root/zlib-ng &&
+          cmake -G Ninja -B build -D BUILD_SHARED_LIBS=OFF -D WITH_GTEST=OFF -D CMAKE_INSTALL_PREFIX=/root/z && cmake --build build && cmake --install build &&
           echo "--- Compiling binary ---" &&
-          gcc -static -o hello_openssl hello_openssl.c -I/usr/include -L/usr/lib -lssl -lcrypto'
+          gcc -static -o hello_zlib-ng hello_zlib-ng.c -I/root/z/include -L/root/z/lib -lz'
 
       - name: Run cross-arch container qemu run
         run: >
           docker run -v ${{ github.workspace }}:/root -w /root ghcr.io/userdocs/qbt-musl-cross-make:${arch_type} bash -c '
           echo "--- Checking binary type ---" &&
-          file ./hello_openssl &&
+          file ./hello_zlib-ng &&
 
           echo "--- Running binary ---" &&
-          ./hello_openssl'
+          ./hello_zlib-ng'
