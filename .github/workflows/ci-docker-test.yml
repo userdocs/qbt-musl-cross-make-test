@@ -11,6 +11,7 @@ on:
 
 jobs:
   bootstrap-matrix:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04-arm
     outputs:
       docker_test_matrix: ${{ steps.triples.outputs.docker_test_matrix }}
@@ -20,13 +21,12 @@ jobs:
           persist-credentials: false
 
       - name: bootstrap the matrix
-        if: github.event_name == 'workflow_dispatch'
         id: triples
         run: |
           echo "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
 
   docker-test:
-    needs: bootstrap-matrix
+    needs: ${{ github.event_name == 'workflow_dispatch' && 'bootstrap-matrix' || '' }}
     permissions:
       contents: read
     env:
