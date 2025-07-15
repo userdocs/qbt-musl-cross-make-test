@@ -165,7 +165,7 @@ jobs:
             printf '\n%s\n\n' "build_new_release=false" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [[ "${build_new_release}"" == "true" ]]; then
+          if [[ "${build_new_release}" == "true" ]]; then
           cat > "versions.json" <<- VERSIONS_JSON
           {
             "CONFIG_SUB_REV": "${remote_versions[CONFIG_SUB_REV]}",
@@ -184,7 +184,7 @@ jobs:
           printf '\n%s\n\n' "existing versions.mak"
           cat versions.mak >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${build_new_release}"" == "true" ]]; then
+          if [[ "${build_new_release}" == "true" ]]; then
           cat > "versions.mak" <<- VERSIONS_MAK
           CONFIG_SUB_REV = ${remote_versions[CONFIG_SUB_REV]}
           GCC_VER = ${remote_versions[GCC_VER]}
