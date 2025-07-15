@@ -98,6 +98,8 @@ jobs:
             if [[ ! "$iray" =~ ^(CONFIG_SUB_REV|MUSL_VER)$ ]]; then
               if [[ "$(ver "${current_versions[$iray]}")" -lt "$(ver "${remote_versions[$iray]}")" ]]; then
                 printf "%-14s current:%-15s remote:%-15s %s\n" "$iray" "${current_versions[$iray]}" "${remote_versions[$iray]}" "< New version available - workflow will be triggered"
+
+                # get updated shasum of $iray
                 curl -sL "${remote_urls_dl[$iray]}" -o "${remote_urls_dl[$iray]##*/}"
                 sha1sum "${remote_urls_dl[$iray]##*/}" > "hashes/${remote_urls_dl[$iray]##*/}.sha1"
                 rm -f "${remote_urls_dl[$iray]##*/}"
@@ -111,22 +113,22 @@ jobs:
 
                 if [[ -d "${current_patch_dir}" ]]; then
                     printf '\n%s\n\n' "${current_patch_dir} exists"
-                    printf '%s\n\n' "Does the ${patch_dir_prefix}-${current_versions[$iray]} directory has any patches?"
+                    printf '%s\n\n' "Does the ${patch_dir_prefix}-${current_versions[$iray]} directory has any patches?" >> $GITHUB_STEP_SUMMARY
                     if (
                         shopt -s nullglob dotglob
                         f=("${current_patch_dir}"/*.diff)
                         ((${#f[@]}))
                     ); then
-                        printf '%s\n\n' "It does ... copying them to ${new_patch_dir}"
+                        printf '%s\n\n' "It does ... copying them to ${new_patch_dir}" >> $GITHUB_STEP_SUMMARY
                         # Create directory and copy patches
                         mkdir -p "${new_patch_dir}"
                         cp -rf "${current_patch_dir}"/* "${new_patch_dir}/"
                     else
-                        echo 'directory is empty'
+                        printf '\n%s\n\n' '${patch_dir_prefix}-${current_versions[$iray]} directory is empty' >> $GITHUB_STEP_SUMMARY
                     fi
                 else
-                    printf '\n%s\n\n' "${current_patch_dir} does not exist"
-                    printf '%s\n\n' "no patches to copy over to new version"
+                    printf '\n%s\n\n' "${current_patch_dir} does not exist" >> $GITHUB_STEP_SUMMARY
+                    printf '%s\n\n' "no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
                 fi
 
                 printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
