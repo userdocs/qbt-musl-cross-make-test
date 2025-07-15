@@ -160,10 +160,10 @@ jobs:
           if [[ ${bypass_check} == 'true' ]] ; then
             printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
             build_new_release=true
-            printf '\n%s\n\n' "build_new_release=true" >> $GITHUB_STEP_SUMMARY
-          else
-            printf '\n%s\n\n' "build_new_release=false" >> $GITHUB_STEP_SUMMARY
           fi
+
+          printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
+          printf '\n%s\n\n' "build_new_release=${build_new_release}" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${build_new_release}" == "true" ]]; then
           cat > "versions.json" <<- VERSIONS_JSON
@@ -179,12 +179,10 @@ jobs:
             "ISL_VER": "${remote_versions[ISL_VER]}"
           }
           VERSIONS_JSON
-          fi
 
-          printf '\n%s\n\n' "existing versions.mak" >> $GITHUB_STEP_SUMMARY
-          cat versions.mak >> $GITHUB_STEP_SUMMARY
+            printf '\n%s\n\n' "# existing versions.mak" >> $GITHUB_STEP_SUMMARY
+            cat versions.mak >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${build_new_release}" == "true" ]]; then
           cat > "versions.mak" <<- VERSIONS_MAK
           CONFIG_SUB_REV = ${remote_versions[CONFIG_SUB_REV]}
           GCC_VER = ${remote_versions[GCC_VER]}
@@ -196,12 +194,12 @@ jobs:
           LINUX_VER = ${remote_versions[LINUX_VER]}
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
+
+            printf '\n%s\n\n' "# updated versions.mak" >> $GITHUB_STEP_SUMMARY
+            cat versions.mak >> $GITHUB_STEP_SUMMARY
           fi
 
-          printf '\n%s\n\n' "updated versions.mak" >> $GITHUB_STEP_SUMMARY
-          cat versions.mak >> $GITHUB_STEP_SUMMARY
-
-          printf '%b\n' "# Versions Outputs Summary" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "# Remote versions outputs summary" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "CONFIG_SUB_REV: ${remote_versions[CONFIG_SUB_REV]}" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "GCC_VER: ${remote_versions[GCC_VER]}" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "BINUTILS_VER: ${remote_versions[BINUTILS_VER]}" >> $GITHUB_STEP_SUMMARY
