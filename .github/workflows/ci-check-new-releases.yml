@@ -181,7 +181,7 @@ jobs:
           VERSIONS_JSON
           fi
 
-          printf '\n%s\n\n' "existing versions.mak"
+          printf '\n%s\n\n' "existing versions.mak" >> $GITHUB_STEP_SUMMARY
           cat versions.mak >> $GITHUB_STEP_SUMMARY
 
           if [[ "${build_new_release}" == "true" ]]; then
@@ -198,7 +198,7 @@ jobs:
           VERSIONS_MAK
           fi
 
-          printf '\n%s\n\n' "updated versions.mak"
+          printf '\n%s\n\n' "updated versions.mak" >> $GITHUB_STEP_SUMMARY
           cat versions.mak >> $GITHUB_STEP_SUMMARY
 
           printf '%b\n' "# Versions Outputs Summary" >> $GITHUB_STEP_SUMMARY
