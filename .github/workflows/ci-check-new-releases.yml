@@ -133,6 +133,7 @@ jobs:
                 fi
 
                 printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+                build_new_release=true
               else
                 printf "%-14s current:%-15s remote:%-15s\n" "$iray" "${current_versions[$iray]}" "${remote_versions[$iray]}"
               fi
