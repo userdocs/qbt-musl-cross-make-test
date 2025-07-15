@@ -169,6 +169,8 @@ jobs:
           }
           VERSIONS_JSON
 
+          cat versions.mak >> $GITHUB_STEP_SUMMARY
+
           cat > "versions.mak" <<- VERSIONS_MAK
           CONFIG_SUB_REV = ${remote_versions[CONFIG_SUB_REV]}
           GCC_VER = ${remote_versions[GCC_VER]}
@@ -181,6 +183,7 @@ jobs:
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
 
+          cat versions.mak >> $GITHUB_STEP_SUMMARY
 
           if [[ ${bypass_check} == 'true' ]] ; then
             printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
