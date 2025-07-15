@@ -11,7 +11,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-24.04-arm
-    name: "bootstrap-build-deps"
+
+    name: "yes"
+
     env:
       GNU_MIRROR_URL: ${{ inputs.gnu_mirror_url }}
 
@@ -19,6 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.ref }}
 
