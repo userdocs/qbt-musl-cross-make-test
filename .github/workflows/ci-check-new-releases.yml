@@ -55,6 +55,7 @@ jobs:
               printf '%s\n' "savannah.gnu.org is unreachable (again), using jq to get config.sub commit hash of current version"
           fi
 
+          # current version is determined by getting the versions.json from the latest release
           declare -A current_versions
           eval "$(jq -r 'to_entries[]|@sh"current_versions[\(.key)]=\(.value)"' remote_versions.json)"
 
