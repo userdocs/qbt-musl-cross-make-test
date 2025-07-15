@@ -21,7 +21,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
-          token: ${{ github.token }}
 
       - name: Downloads sources
         run: make download_only
