@@ -19,7 +19,8 @@ RUN case "$TARGETPLATFORM" in \
     && apk add -u --no-cache \
         autoconf automake bash cmake coreutils curl \
         file fortify-headers git gpg patch pkgconf \
-        libtool make perl python3-dev python3-dev py3-numpy py3-numpy-dev libc-dev linux-headers ttf-freefont \
+        libtool make perl python3-dev python3-dev \
+		py3-numpy py3-numpy-dev libc-dev linux-headers ttf-freefont \
         graphviz re2c xz ninja-build ninja-is-really-ninja sudo \
     && curl -Lo- "${BASE_URL}/${URL_PREFIX}${ARCH}.tar.xz" | tar xJf - --strip-components=1 -C /usr/local \
     && cd /usr/local/bin \
