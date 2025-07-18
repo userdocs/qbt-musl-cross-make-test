@@ -24,11 +24,11 @@ LINKER_FLAGS = \
     -Wl,--gc-sections
 
 # Static Linking Flags
-STATIC_FLAGS = -static
-STATIC_LDFLAGS = -static
+STATIC_FLAGS = -static --static
+STATIC_LDFLAGS = -static --static
 
 # Toolchain Build Flags (for building the toolchain itself statically)
-TOOLCHAIN_STATIC_FLAGS = -static -static-libgcc -static-libstdc++
+TOOLCHAIN_STATIC_FLAGS = -static --static -static-libgcc -static-libstdc++
 
 # Compiler configurations
 COMMON_CONFIG += --prefix= --libdir=/lib
@@ -47,6 +47,7 @@ COMMON_CONFIG += LDFLAGS_FOR_HOST="${LINKER_FLAGS} ${TOOLCHAIN_STATIC_FLAGS}"
 # Binutils configuration
 BINUTILS_CONFIG += --enable-default-pie
 BINUTILS_CONFIG += --enable-static
+BINUTILS_CONFIG += --disable-shared
 BINUTILS_CONFIG += --with-pic
 BINUTILS_CONFIG += --enable-deterministic-archives
 BINUTILS_CONFIG += --enable-ld=default
@@ -56,7 +57,6 @@ BINUTILS_CONFIG += --enable-threads
 BINUTILS_CONFIG += --enable-64-bit-bfd
 BINUTILS_CONFIG += --enable-new-dtags
 BINUTILS_CONFIG += --disable-gprofng --disable-gdb
-BINUTILS_CONFIG += --disable-shared
 BINUTILS_CONFIG += --disable-plugins
 BINUTILS_CONFIG += --disable-multilib
 BINUTILS_CONFIG += --disable-nls
@@ -64,8 +64,12 @@ BINUTILS_CONFIG += --disable-gold
 BINUTILS_CONFIG += --disable-werror
 
 # GCC configuration
-GCC_CONFIG += --enable-default-pie --enable-static-pie
-GCC_CONFIG += --enable-pic --with-pic --enable-static
+GCC_CONFIG += --enable-static
+GCC_CONFIG += --disable-shared
+GCC_CONFIG += --enable-default-pie
+GCC_CONFIG += --enable-static-pie
+GCC_CONFIG += --enable-pic
+GCC_CONFIG += --with-pic
 GCC_CONFIG += --enable-initfini-array
 GCC_CONFIG += --enable-libstdcxx-time=rt
 GCC_CONFIG += --enable-deterministic-archives
@@ -80,7 +84,6 @@ GCC_CONFIG += --with-system-zlib
 GCC_CONFIG += --disable-bootstrap --disable-assembly --disable-werror
 GCC_CONFIG += --disable-multilib --disable-libmudflap --disable-libgomp
 GCC_CONFIG += --disable-libsanitizer --disable-gnu-indirect-function
-GCC_CONFIG += --disable-shared
 GCC_CONFIG += --disable-decimal-float
 GCC_CONFIG += --disable-nls
 GCC_CONFIG += --disable-plugin
