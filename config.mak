@@ -1,5 +1,5 @@
 # Optimization Flags - Ensure no LTO flags are present
-OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections
+OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections -pthread
 
 # Preprocessor Flags
 PREPROCESSOR_FLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
@@ -25,7 +25,7 @@ LINKER_FLAGS = \
 
 # Static Linking Flags
 STATIC_FLAGS = -static --static
-STATIC_LDFLAGS = -static --static
+STATIC_LDFLAGS = -static
 
 # Toolchain Build Flags (for building the toolchain itself statically)
 TOOLCHAIN_STATIC_FLAGS = -static --static -static-libgcc -static-libstdc++
@@ -65,6 +65,7 @@ COMMON_CONFIG += --disable-shared
 COMMON_CONFIG += --disable-multilib
 COMMON_CONFIG += --disable-nls
 COMMON_CONFIG += --disable-werror
+COMMON_CONFIG += --with-linker-hash-style=gnu
 
 # Binutils configuration
 BINUTILS_CONFIG += --enable-ld=default
@@ -86,7 +87,6 @@ GCC_CONFIG += --enable-fully-dynamic-strings
 GCC_CONFIG += --enable-__cxa_atexit
 GCC_CONFIG += --enable-link-serialization=2
 GCC_CONFIG += --with-default-libstdcxx-abi=new
-GCC_CONFIG += --with-linker-hash-style=gnu
 GCC_CONFIG += --disable-bootstrap --disable-assembly
 GCC_CONFIG += --disable-libmudflap --disable-libgomp
 GCC_CONFIG += --disable-libsanitizer --disable-gnu-indirect-function
