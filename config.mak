@@ -1,5 +1,5 @@
 # Optimization Flags - Ensure no LTO flags are present
-OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections -pthread
+OPTIMIZATION_FLAGS = -O3 -pipe -fdata-sections -ffunction-sections
 
 # Preprocessor Flags
 PREPROCESSOR_FLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
@@ -56,6 +56,7 @@ COMMON_CONFIG += --enable-deterministic-archives
 COMMON_CONFIG += --enable-languages=c,c++
 COMMON_CONFIG += --enable-default-ssp
 COMMON_CONFIG += --enable-linker-build-id
+COMMON_CONFIG += --enable-libatomic
 
 # disable
 COMMON_CONFIG += --disable-plugin
