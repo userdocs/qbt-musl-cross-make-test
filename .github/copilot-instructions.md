@@ -18,6 +18,8 @@ gh cli cannot get the id of a workflow it started with gh run workflow. you need
 
 # gcc / binutils specific
 
+load info from ../gcc-configure-options.md
+
 binutils gold linker is depreciated; only ude ld=default and --disable-gold
 
 when building a fully static toolchain linked to musl we cannot use -flto -fuse-linker-plugin as the lto is a dynamically loaded plugin that cannot be loaded by a fully static gcc linked against musl. So the toolchain does not support lto and no lto settings should be applied or added.
@@ -33,3 +35,4 @@ Don't suggest glibc only or a glibcism for musl cflags/cxxflags
 # debugging specific
 
 to debug on qemu we need to use qemu -g port binary for example  qemu -g 1234 ./qbt-nox-static then connect to that via gdb ./qbt-nox-static in another terminal.
+
