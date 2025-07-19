@@ -93,7 +93,8 @@ GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-default-libstdcxx-abi=new
 GCC_CONFIG += --with-linker-hash-style=gnu
 # disable
-GCC_CONFIG += --disable-bootstrap --disable-assembly
+GCC_CONFIG += --disable-bootstrap
+GCC_CONFIG += --disable-assembly
 GCC_CONFIG += --disable-libmudflap
 GCC_CONFIG += --disable-libgomp
 GCC_CONFIG += --disable-libsanitizer
