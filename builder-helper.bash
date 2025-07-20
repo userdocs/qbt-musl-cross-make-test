@@ -85,7 +85,7 @@ if [[ "${2}" == "build" ]]; then
         apk update && \
         apk add -u --no-cache autoconf automake bash bison build-base \
             curl findutils flex git libarchive-tools libtool linux-headers \
-            patch perl pkgconf rsync tar texinfo xz zip zlib-dev zlib-static && \
+            musl-dev patch perl pkgconf rsync tar texinfo xz zip zlib-dev zlib-static && \
         git config --global --add safe.directory '*' && \
         make -j${threads} install TARGET=\"${target}\" OUTPUT=\"/root/build/${target}\" && \
         cd \"build\" && \
