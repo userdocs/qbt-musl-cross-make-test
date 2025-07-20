@@ -87,6 +87,9 @@ GCC_CONFIG += --enable-libstdcxx-time=rt
 GCC_CONFIG += --enable-deterministic-archives
 GCC_CONFIG += --enable-fully-dynamic-strings
 GCC_CONFIG += --enable-clocale=generic
+GCC_CONFIG += --enable-libquadmath
+GCC_CONFIG += --enable-libquadmath-support
+GCC_CONFIG += --enable-initfini-array
 # with
 GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
@@ -99,7 +102,6 @@ GCC_CONFIG += --disable-libmudflap
 GCC_CONFIG += --disable-libgomp
 GCC_CONFIG += --disable-libsanitizer
 GCC_CONFIG += --disable-gnu-indirect-function
-GCC_CONFIG += --disable-decimal-float
 GCC_CONFIG += --disable-lto
 
 # GCC configuration for target - modified by workflow or build-helper.bash using triples.json
