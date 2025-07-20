@@ -3,7 +3,10 @@ name: ci - check-new-release
 on:
   workflow_call:
     inputs:
-      bypass_check:
+      bypass_update_check:
+        type: string
+        required: false
+      bypass_git_commit:
         type: string
         required: false
       gnu_mirror_url:
@@ -21,7 +24,8 @@ jobs:
     env:
       GH_TOKEN: "${{ github.token}}"
       build_new_release: "false"
-      bypass_check: ${{ inputs.bypass_check }}
+      bypass_update_check: ${{ inputs.bypass_update_check }}
+      bypass_git_commit: ${{ inputs.bypass_git_commit }}
       gnu_mirror_url: ${{ inputs.gnu_mirror_url }}
 
     steps:
@@ -157,15 +161,9 @@ jobs:
             fi
           done
 
-          if [[ ${bypass_check} == 'true' ]] ; then
-            printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
-            build_new_release=true
-          fi
-
           printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
           printf '\n%s\n\n' "build_new_release=${build_new_release}" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${build_new_release}" == "true" ]]; then
           cat > "versions.json" <<- VERSIONS_JSON
           {
             "CONFIG_SUB_REV": "${remote_versions[CONFIG_SUB_REV]}",
@@ -180,8 +178,8 @@ jobs:
           }
           VERSIONS_JSON
 
-            printf '\n%s\n\n' "# existing versions.mak" >> $GITHUB_STEP_SUMMARY
-            cat versions.mak >> $GITHUB_STEP_SUMMARY
+          printf '\n%s\n\n' "# existing versions.mak" >> $GITHUB_STEP_SUMMARY
+          cat versions.mak >> $GITHUB_STEP_SUMMARY
 
           cat > "versions.mak" <<- VERSIONS_MAK
           CONFIG_SUB_REV = ${remote_versions[CONFIG_SUB_REV]}
@@ -195,9 +193,8 @@ jobs:
           ISL_VER = ${remote_versions[ISL_VER]}
           VERSIONS_MAK
 
-            printf '\n%s\n\n' "# updated versions.mak" >> $GITHUB_STEP_SUMMARY
-            cat versions.mak >> $GITHUB_STEP_SUMMARY
-          fi
+          printf '\n%s\n\n' "# updated versions.mak" >> $GITHUB_STEP_SUMMARY
+          cat versions.mak >> $GITHUB_STEP_SUMMARY
 
           printf '%b\n' "# Remote versions outputs summary" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "CONFIG_SUB_REV: ${remote_versions[CONFIG_SUB_REV]}" >> $GITHUB_STEP_SUMMARY
@@ -210,13 +207,23 @@ jobs:
           printf '%b\n' "LINUX_VER: ${remote_versions[LINUX_VER]}" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "ISL_VER: ${remote_versions[ISL_VER]}" >> $GITHUB_STEP_SUMMARY
 
+          if [[ ${bypass_update_check} == 'true' ]] ; then
+            printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ ${bypass_git_commit} == 'true' ]] ; then
+              printf '\n%s\n\n' "# Git changes will be: skipped" >> $GITHUB_STEP_SUMMARY
+          else
+              printf '\n%s\n\n' "# Git changes will be: committed" >> $GITHUB_STEP_SUMMARY
+          fi
+
       # This step only runs of if steps.boot_strap_release.outputs.build_new_release == 'true'
-      # This will only be set if the versions.json value from the latest release is different to the remote version. Not the local version.mak version
+      # This will only be set if the versions.json value from the latest release is different to the remote version. Not the local version.mak
       # So if the bypass check is used the automatic change by the workflow won't be committed and the build will use the version.mak
       # Because the upstream version and the latest release version are the same. The versions.mak is not used in the version check.
       # Allowing us to build whatever combinations we define in the versions.mak
       - name: Commit and Push
-        if: ${{ steps.boot_strap_release.outputs.build_new_release == 'true' }}
+        if: ${{ steps.boot_strap_release.outputs.build_new_release == 'true' && env.bypass_git_commit == false }}
         run: |
           # Only run git commands if there are actual changes
           if [[ -f "versions.json" ]] && [[ -f "versions.mak" ]] && [[ -d "hashes" ]] && [[ -d "patches" ]] && [[ -f "config.sub" ]]; then
