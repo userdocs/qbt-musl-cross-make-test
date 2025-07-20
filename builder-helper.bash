@@ -71,8 +71,8 @@ printf '%s\n\n' "sed -i \"s|^GCC_CONFIG_FOR_TARGET +=.*|GCC_CONFIG_FOR_TARGET +=
 printf '%s\n\n' "docker run -it --platform=linux/${docker_platform} -w /root -v $(pwd):/root alpine:edge"
 printf '%s\n' "apk add -u --no-cache autoconf automake bash bison build-base \ "
 printf '%s\n' "curl findutils flex git libarchive-tools libtool linux-headers \ "
-printf '%s\n\n' "patch perl pkgconf rsync tar texinfo xz zip zlib-dev zlib-static"
-printf '%s\n\n' "make -j${threads} install TARGET=\"${target}\" OUTPUT=\"build/${target}\""
+printf '%s\n\n' "musl-dev patch perl pkgconf rsync tar texinfo xz zip zlib-dev zlib-static"
+printf '%s\n\n' "make -j${threads} install TARGET=\"${target}\" OUTPUT=\"build/${target}\" | tee ${target}-build.log"
 printf '%s\n' "cd \"build\""
 printf '%s\n\n' "XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
 
@@ -87,7 +87,7 @@ if [[ "${2}" == "build" ]]; then
             curl findutils flex git libarchive-tools libtool linux-headers \
             musl-dev patch perl pkgconf rsync tar texinfo xz zip zlib-dev zlib-static && \
         git config --global --add safe.directory '*' && \
-        make -j${threads} install TARGET=\"${target}\" OUTPUT=\"/root/build/${target}\" && \
+        make -j${threads} install TARGET=\"${target}\" OUTPUT=\"/root/build/${target}\" | tee ${target}-build.log && \
         cd \"build\" && \
         XZ_OPT=-9T0 tar -cvJf ${target}.tar.xz ${target}/"
 fi
