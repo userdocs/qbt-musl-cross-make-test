@@ -13,10 +13,6 @@
               "docker_platform": "arm64"
             },
             {
-              "arch_type": "powerpc-linux-musl",
-              "arch_config": "--enable-secureplt --enable-decimal-float=no"
-            },
-            {
               "arch_type": "powerpc64le-linux-musl",
               "arch_config": "--with-abi=elfv2 --enable-secureplt --enable-decimal-float=no --enable-targets=powerpcle-linux"
             }
