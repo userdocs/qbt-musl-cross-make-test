@@ -1,19 +1,11 @@
         {
           "build_host": [
-            "ubuntu-24.04",
             "ubuntu-24.04-arm"
           ],
           "arch_type": [
-            "powerpc-linux-musl",
             "powerpc64le-linux-musl"
           ],
           "include": [
-            {
-              "build_host": "ubuntu-24.04",
-              "alpine_prefix": "amd64",
-              "triple_prefix": "x86_64",
-              "docker_platform": "amd64"
-            },
             {
               "build_host": "ubuntu-24.04-arm",
               "alpine_prefix": "arm64v8",
