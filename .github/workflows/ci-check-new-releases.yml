@@ -185,7 +185,7 @@ jobs:
           ###### copy patches ############################################################
 
           printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
-          printf '\n%s\n\n' "\`\`\`bash\nbuild_new_release=${build_new_release}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "\`\`\`bash\nbuild_new_release=${build_new_release}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
           cat > "versions.json" <<- VERSIONS_JSON
           {
