@@ -168,7 +168,7 @@ jobs:
                   printf '\n%b\n\n' "\`${patch_dir_prefix}-${current_versions[$iray]}\` directory is empty" >> $GITHUB_STEP_SUMMARY
                 fi
               else
-                printf '\n%b\n\n' "> [!NOTE]\n>${current_patch_dir}\` does not exist\n> no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
+                printf '\n%b\n\n' "> [!NOTE]\n> \`${current_patch_dir}\` does not exist\n> no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
               fi
 
               printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
@@ -227,7 +227,7 @@ jobs:
           printf '\n%b\n' "\`\`\`make\n$(cat versions.mak)\n\`\`\`\n" >> $GITHUB_STEP_SUMMARY
 
           printf '%b\n' "# Remote versions outputs summary" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "\`\`\`make" >> $GITHUB_STEP_SUMMARY
           for iray in "${!current_versions[@]}"; do
             printf '%b\n' "$iray: ${remote_versions[$iray]}" >> $GITHUB_STEP_SUMMARY
           done
