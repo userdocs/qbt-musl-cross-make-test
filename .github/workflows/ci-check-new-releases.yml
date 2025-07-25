@@ -67,7 +67,7 @@ jobs:
           remote_versions[CONFIG_SUB_REV]="${config_sub}"
           remote_versions[GCC_VER]="$(curl -sL "${gnu_mirror_url}/gcc/" | ssed -Rn 's|(.*)href="gcc-(.+?)/"(.*)|\2|p' | sort -V | tail -n1)"
           remote_versions[BINUTILS_VER]="$(curl -sL "${gnu_mirror_url}/binutils/" | ssed -Rn 's|(.*)href="binutils-([0-9]+\.[0-9]+)\.tar\.xz"(.*)|\2|p' | tail -n1)"
-          remote_versions[MUSL_VER]=git-"$(git ls-remote "https://git.musl-libc.org/git/musl" | head -n1 | awk '{ print substr($1,1,8) }')"
+          remote_versions[MUSL_VER]="$(git ls-remote "https://git.musl-libc.org/git/musl" | head -n1 | awk '{ print substr($1,1,12) }')"
           remote_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | ssed -Rn 's|(.*)href="gmp-(.+?)\.tar\.xz"(.*)|\2|p' | tail -n1)"
           remote_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | ssed -Rn 's|(.*)href="mpc-(.+?)\.tar\.gz"(.*)|\2|p' | tail -n1)"
           remote_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | ssed -Rn 's|(.*)href="mpfr-(.+?)\.tar\.gz"(.*)|\2|p' | tail -n1)"
