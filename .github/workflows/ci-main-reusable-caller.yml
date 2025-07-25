@@ -8,18 +8,18 @@ on:
         required: true
         default: "https://mirrors.dotsrc.org/gnu"
         type: string
-      only_arm64_runners:
-        description: "arm64 matrix"
+      only_aarch64_runners:
+        description: "aarch64 matrix"
         required: true
         default: false
         type: boolean
-      only_amd64_runners:
-        description: "amd64 matrix"
+      only_x86_64_runners:
+        description: "x86_64 matrix"
         required: true
         default: false
         type: boolean
-      arm64_amd64_runners:
-        description: "arm64 and amd64 matrix"
+      aarch64_x86_64_runners:
+        description: "aarch64 and x86_64 matrix"
         required: true
         default: true
         type: boolean
@@ -83,9 +83,9 @@ jobs:
       contents: read
     outputs:
       gnu_mirror_url: ${{ github.event.inputs.gnu_mirror_url || 'https://mirrors.dotsrc.org/gnu/'  }}
-      only_arm64_runners: ${{ github.event.inputs.only_arm64_runners || 'false' }}
-      only_amd64_runners: ${{ github.event.inputs.only_amd64_runners || 'false' }}
-      arm64_amd64_runners: ${{ github.event.inputs.arm64_amd64_runners || 'true' }}
+      only_aarch64_runners: ${{ github.event.inputs.only_aarch64_runners || 'false' }}
+      only_x86_64_runners: ${{ github.event.inputs.only_x86_64_runners || 'false' }}
+      aarch64_x86_64_runners: ${{ github.event.inputs.aarch64_x86_64_runners || 'true' }}
       toolchains_only: ${{ github.event.inputs.toolchains_only || 'false' }}
       docker_only: ${{ github.event.inputs.docker_only || 'false' }}
       bypass_update_check: ${{ github.event.inputs.bypass_update_check || 'false' }}
@@ -105,9 +105,9 @@ jobs:
       contents: read
     env:
       gnu_mirror_url: ${{ needs.scheduled_defaults.outputs.gnu_mirror_url }}
-      only_arm64_runners: ${{ needs.scheduled_defaults.outputs.only_arm64_runners }}
-      only_amd64_runners: ${{ needs.scheduled_defaults.outputs.only_amd64_runners }}
-      arm64_amd64_runners: ${{ needs.scheduled_defaults.outputs.arm64_amd64_runners }}
+      only_aarch64_runners: ${{ needs.scheduled_defaults.outputs.only_aarch64_runners }}
+      only_x86_64_runners: ${{ needs.scheduled_defaults.outputs.only_x86_64_runners }}
+      aarch64_x86_64_runners: ${{ needs.scheduled_defaults.outputs.aarch64_x86_64_runners }}
       toolchains_only: ${{ needs.scheduled_defaults.outputs.toolchains_only }}
       docker_only: ${{ needs.scheduled_defaults.outputs.docker_only }}
       bypass_update_check: ${{ needs.scheduled_defaults.outputs.bypass_update_check }}
@@ -121,9 +121,9 @@ jobs:
           printf '\n%b\n' ":octocat: Here is a summary of inputs set as string outputs that are used in workflows." >> $GITHUB_STEP_SUMMARY
 
           printf '\n%b\n' "gnu_mirror_url: \`${gnu_mirror_url}\`" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' "only_arm64_runners: \`${only_arm64_runners}\`" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' "only_amd64_runners: \`${only_amd64_runners}\`" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' "arm64_amd64_runners: \`${arm64_amd64_runners}\`" >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "only_aarch64_runners: \`${only_aarch64_runners}\`" >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "only_x86_64_runners: \`${only_x86_64_runners}\`" >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "aarch64_x86_64_runners: \`${aarch64_x86_64_runners}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "toolchains_only: \`${toolchains_only}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "docker_only: \`${docker_only}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "bypass_update_check: \`${bypass_update_check}\`" >> $GITHUB_STEP_SUMMARY
@@ -166,9 +166,9 @@ jobs:
       docker_test_matrix: ${{ steps.triples.outputs.docker_test_matrix }}
       docker_build_platforms: ${{ steps.triples.outputs.docker_build_platforms }}
     env:
-      only_arm64_runners: ${{ needs.scheduled_defaults.outputs.only_arm64_runners }}
-      only_amd64_runners: ${{ needs.scheduled_defaults.outputs.only_amd64_runners }}
-      arm64_amd64_runners: ${{ needs.scheduled_defaults.outputs.arm64_amd64_runners }}
+      only_aarch64_runners: ${{ needs.scheduled_defaults.outputs.only_aarch64_runners }}
+      only_x86_64_runners: ${{ needs.scheduled_defaults.outputs.only_x86_64_runners }}
+      aarch64_x86_64_runners: ${{ needs.scheduled_defaults.outputs.aarch64_x86_64_runners }}
     permissions:
       contents: read
     steps:
@@ -184,23 +184,23 @@ jobs:
           printf '%s\n' "docker_build_matrix=$(jq -c '{arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
           printf '\n%b\n' "# docker_build_matrix\n\n\`\`\`json\n$(jq '{arch_type: [.arch_type[]]}' triples.json)\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          if [[ ${arm64_amd64_runners} == "true" ]] || \
-            [[ ${only_arm64_runners} == "true" && ${only_amd64_runners} == "true" ]] || \
-            [[ ${arm64_amd64_runners} == "true" && ${only_arm64_runners} == "true" && ${only_amd64_runners} == "true" ]]; then
-            printf '%s\n' "docker_build_platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
-            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/amd64,linux/arm64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+          if [[ ${aarch64_x86_64_runners} == "true" ]] || \
+            [[ ${only_aarch64_runners} == "true" && ${only_x86_64_runners} == "true" ]] || \
+            [[ ${aarch64_x86_64_runners} == "true" && ${only_aarch64_runners} == "true" && ${only_x86_64_runners} == "true" ]]; then
+            printf '%s\n' "docker_build_platforms=linux/x86_64,linux/aarch64" >> $GITHUB_OUTPUT
+            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/x86_64,linux/aarch64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
             printf '%s\n' "mcm_build_matrix=$(jq -c . triples.json)" >> $GITHUB_OUTPUT
             printf '\n%b\n' "# mcm_build_matrix\n\n\`\`\`json\n$(jq . triples.json)\n\`\`\`" >> $GITHUB_STEP_SUMMARY
             printf '%s\n' "docker_test_matrix=$(jq -c '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)" >> $GITHUB_OUTPUT
             printf '\n%b\n' "# docker_test_matrix\n\n\`\`\`json\n$(jq '{build_host: [.build_host[]], arch_type: [.arch_type[]]}' triples.json)\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-          elif [[ ${only_arm64_runners} == "true" && ${only_amd64_runners} == "false" && ${arm64_amd64_runners} == "false" ]]; then
+          elif [[ ${only_aarch64_runners} == "true" && ${only_x86_64_runners} == "false" && ${aarch64_x86_64_runners} == "false" ]]; then
             build_host_exclude="ubuntu-24.04"
-            printf '%s\n' "docker_build_platforms=linux/arm64" >> $GITHUB_OUTPUT
-            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/arm64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-          elif [[ ${only_amd64_runners} == "true" && ${only_arm64_runners} == "false" && ${arm64_amd64_runners} == "false" ]]; then
+            printf '%s\n' "docker_build_platforms=linux/aarch64" >> $GITHUB_OUTPUT
+            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/aarch64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+          elif [[ ${only_x86_64_runners} == "true" && ${only_aarch64_runners} == "false" && ${aarch64_x86_64_runners} == "false" ]]; then
             build_host_exclude="ubuntu-24.04-arm"
-            printf '%s\n' "docker_build_platforms=linux/amd64" >> $GITHUB_OUTPUT
-            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/amd64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+            printf '%s\n' "docker_build_platforms=linux/x86_64" >> $GITHUB_OUTPUT
+            printf '\n%b\n' "# docker_build_platforms\n\n\`\`\`bash\ndocker_build_platforms=linux/x86_64\n\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
             printf '%s\n' "Error: Invalid runner selection."
             exit 1
