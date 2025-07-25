@@ -46,7 +46,7 @@ jobs:
                 if [[ $line =~ ^-include[[:space:]](.*)$ ]]; then
                   [[ -f "${BASH_REMATCH[1]}" ]] && cat "${BASH_REMATCH[1]}"
                 else
-                  echo "$line"
+                  printf '%s\n' "$line"
                 fi
               done < "$mak"
               printf '%s\n' '```'
