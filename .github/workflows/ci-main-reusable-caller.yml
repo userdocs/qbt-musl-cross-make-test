@@ -132,9 +132,7 @@ jobs:
           printf '\n%b\n' "retries: \`${retries}\`" >> $GITHUB_STEP_SUMMARY
 
   ci-check-new-releases:
-    if: >
-      needs.skip_duplicate_job.outputs.should_skip != 'true'
-      && needs.scheduled_defaults.outputs.docker_only == 'false'
+    if: needs.skip_duplicate_job.outputs.should_skip != 'true'
     needs: [skip_duplicate_job, scheduled_defaults]
     concurrency:
       group: ci-check-new-releases
@@ -149,8 +147,7 @@ jobs:
 
   ci-bootstrap-matrix:
     if: >
-      always() && !failure() && !cancelled()
-      && needs.skip_duplicate_job.outputs.should_skip != 'true'
+      needs.skip_duplicate_job.outputs.should_skip != 'true'
       && needs.ci-check-new-releases.outputs.build_new_release == 'true'
     needs:
       [
