@@ -63,6 +63,7 @@ jobs:
           #     printf '%s\n' "savannah.gnu.org is unreachable (again), using jq to get sources/config.sub commit hash of current version"
           # fi
 
+          printf '%b\n' "Using jq to get sources/config.sub commit hash of current version" | tee -a $GITHUB_STEP_SUMMARY
           config_sub="$(jq -r .CONFIG_SUB_REV versions.json)"
 
           # current version is determined by getting the versions.json from the latest release
@@ -185,9 +186,6 @@ jobs:
 
           ###### copy patches ############################################################
 
-          printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
-          printf '%b\n' "\`\`\`bash\nbuild_new_release=${build_new_release}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-
           cat > "versions.json" <<- VERSIONS_JSON
           {
             "CONFIG_SUB_REV": "${remote_versions[CONFIG_SUB_REV]}",
@@ -238,6 +236,7 @@ jobs:
 
           if [[ ${bypass_update_check} == 'true' ]] ; then
             printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+            build_new_release=true
           fi
 
           if [[ ${bypass_git_commit} == 'true' ]] ; then
@@ -245,6 +244,9 @@ jobs:
           else
             printf '%s\n' "Git changes will be: committed" >> $GITHUB_STEP_SUMMARY
           fi
+
+          printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "\`\`\`bash\nbuild_new_release=${build_new_release}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       # This step only runs of if steps.boot_strap_release.outputs.build_new_release == 'true'
       # This will only be set if the versions.json value from the latest release is different to the remote version. Not the local version.mak
