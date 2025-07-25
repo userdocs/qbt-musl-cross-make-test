@@ -52,6 +52,7 @@ jobs:
               use_local_config_sub="yes"
           fi
 
+          # This can take up to 3 minutes. moving away from config.sub usage.
           # if curl -sLIo /dev/null --fail "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
           #     config_sub="$(git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,8) }')"
           #     printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
