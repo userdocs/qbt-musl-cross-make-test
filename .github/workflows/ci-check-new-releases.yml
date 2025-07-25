@@ -52,15 +52,17 @@ jobs:
               use_local_config_sub="yes"
           fi
 
-          if curl -sLIo /dev/null --fail "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
-              config_sub="$(git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,8) }')"
-              printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
-              mkdir -p ${github_workspace}/sources
-              curl -sL "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD" -o sources/config.sub
-          else
-              config_sub="$(jq -r .CONFIG_SUB_REV versions.json)"
-              printf '%s\n' "savannah.gnu.org is unreachable (again), using jq to get sources/config.sub commit hash of current version"
-          fi
+          # if curl -sLIo /dev/null --fail "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
+          #     config_sub="$(git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,8) }')"
+          #     printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
+          #     mkdir -p ${github_workspace}/sources
+          #     curl -sL "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD" -o sources/config.sub
+          # else
+          #     config_sub="$(jq -r .CONFIG_SUB_REV versions.json)"
+          #     printf '%s\n' "savannah.gnu.org is unreachable (again), using jq to get sources/config.sub commit hash of current version"
+          # fi
+
+          config_sub="$(jq -r .CONFIG_SUB_REV versions.json)"
 
           # current version is determined by getting the versions.json from the latest release
           declare -A current_versions
