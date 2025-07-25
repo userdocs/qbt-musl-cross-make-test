@@ -172,9 +172,9 @@ jobs:
           VERSIONS_JSON
 
           printf '\n%s\n\n' "# existing versions.mak" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' '\`\`\`make' >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "\`\`\`make" >> $GITHUB_STEP_SUMMARY
           cat versions.mak >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' '\`\`\`' >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
           cat > "versions.mak" <<- VERSIONS_MAK
           CONFIG_SUB_REV = ${remote_versions[CONFIG_SUB_REV]}
@@ -189,27 +189,23 @@ jobs:
           VERSIONS_MAK
 
           printf '\n%s\n\n' "# updated versions.mak" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' '\`\`\`make' >> $GITHUB_STEP_SUMMARY
-          cat versions.mak >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' '\`\`\`' >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "\`\`\`make\n$(cat versions.mak)\n\`\`\`\n" >> $GITHUB_STEP_SUMMARY
 
           printf '%b\n' "# Remote versions outputs summary" >> $GITHUB_STEP_SUMMARY
-          printf '\n%b\n' '\`\`\`make' >> $GITHUB_STEP_SUMMARY
-
+          printf '\n%b\n' "\`\`\`make" >> $GITHUB_STEP_SUMMARY
           for iray in "${!current_versions[@]}"; do
             printf '%b\n' "$iray: ${remote_versions[$iray]}" >> $GITHUB_STEP_SUMMARY
           done
-
-          printf '\n%b\n' '\`\`\`' >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
           if [[ ${bypass_update_check} == 'true' ]] ; then
             printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
           fi
 
           if [[ ${bypass_git_commit} == 'true' ]] ; then
-            printf '\n%s\n\n' "# Git changes will be: skipped" >> $GITHUB_STEP_SUMMARY
+            printf '\n%s\n\n' "Git changes will be: skipped" >> $GITHUB_STEP_SUMMARY
           else
-            printf '\n%s\n\n' "# Git changes will be: committed" >> $GITHUB_STEP_SUMMARY
+            printf '\n%s\n\n' "Git changes will be: committed" >> $GITHUB_STEP_SUMMARY
           fi
 
       # This step only runs of if steps.boot_strap_release.outputs.build_new_release == 'true'
