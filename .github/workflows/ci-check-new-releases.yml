@@ -150,6 +150,11 @@ jobs:
                 printf '\n%b\n\n' "\`${current_patch_dir}\` does not exist" >> $GITHUB_STEP_SUMMARY
                 printf '%s\n\n' ">[!NOTE]\n>no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
               fi
+
+              printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
+              build_new_release=true
+            else
+              printf "%-14s current:%-15s remote:%-15s\n" "$iray" "${current_versions[$iray]}" "${remote_versions[$iray]}"
             fi
           done
 
