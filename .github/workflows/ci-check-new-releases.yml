@@ -240,9 +240,9 @@ jobs:
           fi
 
           if [[ ${bypass_git_commit} == 'true' ]] ; then
-            printf '%s\n' "Git changes will be: skipped" >> $GITHUB_STEP_SUMMARY
+            printf '%b\n' "> [!WARNING]\n> Git changes will be:\n> `skipped`" >> $GITHUB_STEP_SUMMARY
           else
-            printf '%s\n' "Git changes will be: committed" >> $GITHUB_STEP_SUMMARY
+            printf '%b\n' "> [!WARNING]\n> Git changes will be:\n> `committed`" >> $GITHUB_STEP_SUMMARY
           fi
 
           printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
