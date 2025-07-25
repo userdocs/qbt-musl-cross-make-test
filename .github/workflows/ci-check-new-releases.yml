@@ -98,11 +98,30 @@ jobs:
 
           ver() {
               local input="$1"
+
+              # Check if it's a pure numeric version (digits and dots only)
               if [[ "$input" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
                   local test_array
                   read -ra test_array < <(printf "%s" "${input//./ }")
-                  printf "%d%03d%03d%03d" "${test_array[@]}"
+                  # Handle leading zeros by using %d to convert to integers, but pad appropriately
+                  local -a normalized_array
+                  for i in "${test_array[@]}"; do
+                      # Convert to integer to remove leading zeros, then format
+                      normalized_array+=("$(printf "%d" "$i")")
+                  done
+                  printf "%d%03d%03d%03d" "${normalized_array[@]}"
+              # Check if it contains any hex characters (a-f, A-F) - likely a commit hash
+              elif [[ "$input" =~ [a-fA-F] ]]; then
+                  # For commit hashes or hex strings, return as-is (preserve leading zeros)
+                  printf "%s" "$input"
+              # Check if it starts with digits but has non-hex characters
+              elif [[ "$input" =~ ^[0-9]+[^0-9a-fA-F] ]]; then
+                  # For mixed strings starting with numbers, normalize leading zeros in numeric part
+                  local numeric_part="${input%%[^0-9]*}"
+                  local remaining_part="${input#${numeric_part}}"
+                  printf "%d%s" "$numeric_part" "$remaining_part"
               else
+                  # For pure strings or anything else, return as-is
                   printf "%s" "$input"
               fi
           }
@@ -148,7 +167,7 @@ jobs:
                 fi
               else
                 printf '\n%b\n\n' "\`${current_patch_dir}\` does not exist" >> $GITHUB_STEP_SUMMARY
-                printf '%s\n\n' ">[!NOTE]\n>no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
+                printf '%b\n\n' "> [!NOTE]\n>no patches to copy over to new version" >> $GITHUB_STEP_SUMMARY
               fi
 
               printf '%s\n' "build_new_release=true" >> $GITHUB_OUTPUT
@@ -220,7 +239,7 @@ jobs:
       # Because the upstream version and the latest release version are the same. The versions.mak is not used in the version check.
       # Allowing us to build whatever combinations we define in the versions.mak
       - name: Commit and Push
-        if: ${{ steps.boot_strap_release.outputs.build_new_release == 'true' && env.bypass_git_commit == false }}
+        if: ${{ steps.boot_strap_release.outputs.build_new_release == 'true' && env.bypass_git_commit == 'false' }}
         run: |
           # Only run git commands if there are actual changes
           if [[ -f "versions.json" ]] && [[ -f "versions.mak" ]] && [[ -d "hashes" ]] && [[ -d "patches" ]] && [[ -f "config.sub" ]]; then
