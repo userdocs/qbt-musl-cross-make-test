@@ -43,4 +43,4 @@ jobs:
 
       - name: summaries
         if: steps.cache-sources.outputs.cache-hit != 'true'
-        run: printf '\n%b\n' "\`\`\`bash\n$(ls -lh ${{ github.workspace }}/sources | awk '{print $5, $9}')\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+        run: printf '%b\n' "\`\`\`bash\n$(ls -lh ${{ github.workspace }}/sources | awk '{print $5, $9}')\n\`\`\`" >> $GITHUB_STEP_SUMMARY
