@@ -58,7 +58,7 @@ jobs:
             # Use git ls-remote with timeout
             if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,12) }')"; then
               printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
-              printf '%b\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed\` \n> Using sed to get sources/config.sub commit hash via version.mak" | tee -a $GITHUB_STEP_SUMMARY
+              printf '%b\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed\` \n> config.sub commit hash retrieved via git-ls-remote" | tee -a $GITHUB_STEP_SUMMARY
             else
               config_mak_upstream_test="failed"
             fi
