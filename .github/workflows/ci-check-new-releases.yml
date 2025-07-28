@@ -169,6 +169,7 @@ jobs:
                   mkdir -p "${new_patch_dir}"
                   cp -rf "${current_patch_dir}"/* "${new_patch_dir}/"
 
+                printf '%b\n' "> [!Warning]\n> Testing patches brought forward actually work" >> $GITHUB_STEP_SUMMARY
                 # test patches apply to new version and if not delete them from the new patch directory
                 tmp_archive="${upstream_urls_dl[$iray]##*/}"
                 tmp_dir="${tmp_archive%.tar.*}"
