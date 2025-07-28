@@ -165,19 +165,23 @@ jobs:
                   ((${#f[@]}))
                 ); then
                   printf '%b\n' "> [!NOTE]\n> It does ...\n> copying them to \`${new_patch_dir}\`" >> $GITHUB_STEP_SUMMARY
+
                   # Create directory and copy patches
                   mkdir -p "${new_patch_dir}"
                   cp -rf "${current_patch_dir}"/* "${new_patch_dir}/"
 
-                printf '%b\n' "> [!Warning]\n> Testing patches brought forward actually work" >> $GITHUB_STEP_SUMMARY
-                # test patches apply to new version and if not delete them from the new patch directory
-                tmp_archive="${upstream_urls_dl[$iray]##*/}"
-                tmp_dir="${tmp_archive%.tar.*}"
+                  printf '\n%b\n' "> [!Warning]\n> Testing patches brought forward actually work" >> $GITHUB_STEP_SUMMARY
 
-                curl -sL "${upstream_urls_dl[$iray]}" -o "${tmp_archive}"
-                tar -xf "${tmp_archive}"
-                chmod +x help/patch.sh
-                help/patch.sh "${new_patch_dir}" -r "${tmp_dir}" -d -x
+                  # test patches apply to new version and if not delete them from the new patch directory
+                  tmp_archive="${upstream_urls_dl[$iray]##*/}"
+                  tmp_dir="${tmp_archive%.tar.*}"
+
+                  curl -sL "${upstream_urls_dl[$iray]}" -o "${tmp_archive}"
+                  tar -xf "${tmp_archive}"
+                  chmod +x help/patch.sh
+                  printf '%b\n' "\`\`\`bash\n" >> $GITHUB_STEP_SUMMARY
+                  help/patch.sh "${new_patch_dir}" -r "${tmp_dir}" -d -x | tee -a $GITHUB_STEP_SUMMARY
+                  printf '%b\n' "\`\`\`" >> $GITHUB_STEP_SUMMARY
                 else
                   printf '\n%b\n' "\`${patch_dir_prefix}-${current_release_versions[$iray]}\` directory is empty" >> $GITHUB_STEP_SUMMARY
                 fi
