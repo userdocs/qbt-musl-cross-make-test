@@ -176,7 +176,7 @@ jobs:
                 curl -sL "${upstream_urls_dl[$iray]}" -o "${tmp_archive}"
                 tar -xf "${tmp_archive}"
                 chmod +x help/patch.sh
-                patch.sh "${new_patch_dir}"" -r "${tmp_dir}" -d -x
+                patch.sh "${new_patch_dir}" -r "${tmp_dir}" -d -x
                 else
                   printf '\n%b\n' "\`${patch_dir_prefix}-${current_release_versions[$iray]}\` directory is empty" >> $GITHUB_STEP_SUMMARY
                 fi
