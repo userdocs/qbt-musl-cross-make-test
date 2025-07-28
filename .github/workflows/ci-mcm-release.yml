@@ -33,7 +33,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           prerelease: false
-          artifacts: "toolchains/*.tar.xz"
+          artifacts: "toolchains/*.tar.xz,versions.json"
           replacesArtifacts: true
           tag: "${{ env.github_tag }}"
           name: "musl-cross-make toolchains"
