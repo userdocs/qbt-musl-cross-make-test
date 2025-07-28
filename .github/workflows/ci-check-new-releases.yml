@@ -58,7 +58,7 @@ jobs:
             # Use git ls-remote with timeout
             if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,12) }')"; then
               printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
-              printf '%b\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed"\` \n> Using sed to get sources/config.sub commit hash via version.mak" | tee -a $GITHUB_STEP_SUMMARY
+              printf '%b\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed\` \n> Using sed to get sources/config.sub commit hash via version.mak" | tee -a $GITHUB_STEP_SUMMARY
             else
               config_mak_upstream_test="failed"
             fi
@@ -68,7 +68,7 @@ jobs:
 
           if [[ ${config_mak_upstream_test} == "failed" ]]; then
             # set config.sub commit hash to config_sub_upstream via checking versions.mak version. If I updated it, consider it the upstream version.
-            printf '%b\n' "> [!WARNING]\n> \`config_mak_upstream_test:\` \`failed"\` \n> Using sed to get sources/config.sub commit hash via version.mak" | tee -a $GITHUB_STEP_SUMMARY
+            printf '%b\n' "> [!WARNING]\n> \`config_mak_upstream_test:\` \`failed\` \n> Using sed to get sources/config.sub commit hash via version.mak" | tee -a $GITHUB_STEP_SUMMARY
             config_sub_upstream="$(sed -rn 's|CONFIG_SUB_REV = (.*)$|\1|p' versions.mak)"
           fi
 
