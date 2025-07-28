@@ -43,15 +43,7 @@ jobs:
       - name: boot strap
         id: boot_strap_release
         run: |
-          # download versions.json from latest release or use local versions.json renamed to current_release_versions if the download fails
-          if curl -sLIf "https://github.com/${github_repository}/releases/latest/download/versions.json" &> /dev/null; then
-              until curl -sLf "https://github.com/${github_repository}/releases/latest/download/versions.json" > current_release_versions.json; do
-                printf '%s\n' "waiting for URL."
-                sleep 2
-              done
-          else
-            cp -f versions.json current_release_versions.json
-          fi
+          ################# config.mak stuff ######################
 
           # Fast connectivity check with short timeout
           if curl -sLIo /dev/null --fail --connect-timeout 5 --max-time 10 "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
@@ -72,9 +64,36 @@ jobs:
             config_sub_upstream="$(sed -rn 's|CONFIG_SUB_REV = (.*)$|\1|p' versions.mak)"
           fi
 
-          # current versions are determined by getting the versions.json from the latest release. This is saved as current_release_versions.json in the workflow
+          ################# config.mak stuff ######################
+
+          ################# versions.json stuff ######################
           declare -A current_release_versions
-          eval "$(jq -r 'to_entries[]|@sh"current_release_versions[\(.key)]=\(.value)"' current_release_versions.json)"
+
+          # download versions.json from latest release or use local versions.json renamed to current_release_versions if the download fails
+          if curl -sLIf "https://github.com/${github_repository}/releases/latest/download/versions.json" &> /dev/null; then
+            until curl -sLf "https://github.com/${github_repository}/releases/latest/download/versions.json" > current_release_versions.json; do
+              printf '%s\n' "waiting for URL."
+              sleep 2
+            done
+            printf '%b\n' "> [!NOTE]\n> Release \`versions.json:\` \`downloaded\` \n> using this to compare values" | tee -a $GITHUB_STEP_SUMMARY
+            # current versions are determined by getting the versions.json from the latest release. This is saved as current_release_versions.json in the workflow
+            eval "$(jq -r 'to_entries[]|@sh"current_release_versions[\(.key)]=\(.value)"' current_release_versions.json)"
+          else
+            printf '%b\n' "> [!NOTE]\n> Release \`versions.json:\` \`none\` \n> creating \`current_release_versions\` with empty values" | tee -a $GITHUB_STEP_SUMMARY
+            # if there is no versions.json in the latest release, create the current_release_versions array with empty values
+            # If there is a release it should be there. If not something has gone wrong.
+            current_release_versions[CONFIG_SUB_REV]=""
+            current_release_versions[GCC_VER]=""
+            current_release_versions[BINUTILS_VER]=""
+            current_release_versions[MUSL_VER]=""
+            current_release_versions[GMP_VER]=""
+            current_release_versions[MPC_VER]=""
+            current_release_versions[MPFR_VER]=""
+            current_release_versions[LINUX_VER]=""
+            current_release_versions[ISL_VER]=""
+          fi
+
+          ################# versions.json stuff ######################
 
           # upstream config.sub commit hash is set to config_sub_upstream
           declare -A upstream_versions
