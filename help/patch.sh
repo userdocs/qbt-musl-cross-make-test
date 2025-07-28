@@ -7,6 +7,7 @@ apply_patches() {
 	local force="${4:-false}"
 	local git_repo="${5:-}"
 	local failed_patches_file="${6:-}"
+	local delete_failed="${7:-false}"
 	local caller_dir="${PWD}"
 	local original_dir="${PWD}"
 
@@ -200,7 +201,35 @@ apply_patches() {
 		fi
 	fi
 
-	# Return to original directory
+	# Delete failed patches if requested and in dry run mode
+	if [[ $dry_run == "true" && $delete_failed == "true" && ${#failed_patches[@]} -gt 0 ]]; then
+		printf '\n%s\n' "Deleting ${#failed_patches[@]} failed patch files from: $patch_dir"
+		local deleted_count=0
+		local failed_count=0
+
+		for patch_name in "${failed_patches[@]}"; do
+			local patch_path="$patch_dir/$patch_name"
+			if [[ -f $patch_path ]]; then
+				if rm "$patch_path" 2> /dev/null; then
+					printf '\n%s\n' "  ✓ Deleted: $patch_name"
+					((deleted_count++))
+				else
+					printf '\n%s\n' "  ✗ Failed to delete: $patch_name"
+					((failed_count++))
+				fi
+			else
+				printf '\n%s\n' "  ⚠ Not found: $patch_name"
+				((failed_count++))
+			fi
+		done
+
+		if [[ $deleted_count -gt 0 ]]; then
+			printf '\n%s\n' "Successfully deleted $deleted_count failed patch file(s)"
+		fi
+		if [[ $failed_count -gt 0 ]]; then
+			printf '\n%s\n' "Warning: Failed to delete $failed_count patch file(s)"
+		fi
+	fi # Return to original directory
 	cd "$original_dir" || printf '\n%s\n' "Warning: Failed to return to original directory"
 }
 
@@ -212,6 +241,7 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 	patch_dir=""
 	git_repo=""
 	failed_patches_file=""
+	delete_failed_patches="false"
 
 	# Parse command line arguments
 	while [[ $# -gt 0 ]]; do
@@ -246,6 +276,10 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 					exit 1
 				fi
 				;;
+			-x | --delete-failed)
+				delete_failed_patches="true"
+				shift
+				;;
 			-h | --help)
 				printf '\n%s\n' "Usage: $0 [OPTIONS] [patch_directory]"
 				printf '\n%s\n' "Options:"
@@ -254,6 +288,7 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 				printf '\n%s\n' "  -f, --force         Try harder to apply patches (ignore whitespace, use reject files)"
 				printf '\n%s\n' "  -r, --repo DIR      Target directory to apply patches to (git repo or regular directory)"
 				printf '\n%s\n' "  -s, --save-failed FILE   Save failed patch file names to specified file (dry run only)"
+				printf '\n%s\n' "  -x, --delete-failed      Delete failed patch files from patch directory (dry run only)"
 				printf '\n%s\n' "  -h, --help          Show this help message"
 				printf '\n%s\n' "Arguments:"
 				printf '\n%s\n' "  patch_directory     Directory containing .patch or .diff files (default: 'patches')"
@@ -272,6 +307,8 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 				printf '\n%s\n' "  $0 -v -f                     # Verbose output with force mode"
 				printf '\n%s\n' "  $0 -d -s failed.txt          # Dry run and save failed patches to 'failed.txt'"
 				printf '\n%s\n' "  $0 -d -s /tmp/fails.list     # Dry run and save failed patches with absolute path"
+				printf '\n%s\n' "  $0 -d -x                     # Dry run and delete failed patches from patch directory"
+				printf '\n%s\n' "  $0 -d -x -v                  # Dry run, delete failed patches, and show verbose output"
 				printf '\n%s\n' "Fixing Failed Patches:"
 				printf '\n%s\n' "  When patches fail, the script suggests recovery methods based on target type:"
 				printf '\n%s\n' "  Git repositories:"
@@ -307,7 +344,7 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
 		patch_dir="patches"
 	fi
 
-	apply_patches "$patch_dir" "$dry_run" "$verbose" "$force" "$git_repo" "$failed_patches_file"
+	apply_patches "$patch_dir" "$dry_run" "$verbose" "$force" "$git_repo" "$failed_patches_file" "$delete_failed_patches"
 fi
 
 printf '\n'
