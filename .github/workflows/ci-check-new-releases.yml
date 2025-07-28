@@ -52,13 +52,24 @@ jobs:
             cp -f versions.json current_release_versions.json
           fi
 
+          # Fast connectivity check with short timeout
+          if curl -sLIo /dev/null --fail --connect-timeout 5 --max-time 10 "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
+            # Use git ls-remote with timeout
+            if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" | head -n1 | awk '{ print substr($1,1,12) }')"; then
+              printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
+            else
+              printf '%s\n' "git ls-remote timed out, falling back to cached version"
+              config_sub_upstream="$(jq -r .CONFIG_SUB_REV versions.json)"
+            fi
+          else
+            # set config.sub commit hash to config_sub_upstream via checking versions.mak version. If i updated it, consider it the upstream version.
+            printf '%b\n' "> [!WARNING]\n> Using sed to get sources/config.sub commit hash via version.mak\n> We don't check upstream as config.sub usage is not required anymore" | tee -a $GITHUB_STEP_SUMMARY
+            config_sub_upstream="$(sed -rn 's|CONFIG_SUB_REV = (.*)$|\1|p' versions.mak)"
+          fi
+
           # current versions are determined by getting the versions.json from the latest release. This is saved as current_release_versions.json in the workflow
           declare -A current_release_versions
           eval "$(jq -r 'to_entries[]|@sh"current_release_versions[\(.key)]=\(.value)"' current_release_versions.json)"
-
-          # set config.sub commit hash to config_sub_upstream via checking versions.mak version. If i updated it, consider it the upstream version.
-          printf '%b\n' "> [!WARNING]\n> Using sed to get sources/config.sub commit hash via version.mak\n> We don't check upstream as config.sub usage is not required anymore" | tee -a $GITHUB_STEP_SUMMARY
-          config_sub_upstream="$(sed -rn 's|CONFIG_SUB_REV = (.*)$|\1|p' versions.mak)"
 
           # upstream config.sub commit hash is set to config_sub_upstream
           declare -A upstream_versions
