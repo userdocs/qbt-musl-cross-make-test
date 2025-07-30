@@ -23,8 +23,7 @@ jobs:
       matrix_arch_type: ${{ matrix.arch_type }}
       matrix_arch_config: ${{ matrix.arch_config }}
       matrix_triple_prefix: ${{ matrix.triple_prefix }}
-      gnu_mirror_url: ${{ inputs.gnu_mirror_url }}
-      container_name: mcm
+      container_name: "cross_builder"
 
     steps:
       - name: Checkout
@@ -62,11 +61,13 @@ jobs:
       - name: Host - Github cache files - update timestamps
         run: find ${{ github.workspace }}/sources/ -type f -exec touch -a -m {} +
 
-      - name: Host - Create docker multiarch container
-        run: |
-          docker run --name ${container_name} -it -d -e "GNU_MIRROR_URL=${gnu_mirror_url}" -w /home/gh -v ${{ github.workspace }}:/home/gh alpine:edge
-          docker exec ${container_name} sh -c 'adduser -h /home/gh -Ds /bin/bash -u 1001 gh && apk add sudo'
-          docker exec ${container_name} sh -c 'printf "%s" "gh ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gh'
+      - uses: userdocs/actions/qbt_docker@main
+        with:
+            container_name: ${{ env.container_name }}
+            os_id: "alpine"
+            os_version_id: "edge"
+            custom_docker_commands: "-e GNU_MIRROR_URL=${{ inputs.gnu_mirror_url }}"
+            additional_alpine_apps: ""
 
       - name: Docker - apk update
         run: docker exec ${container_name} apk update --no-cache
