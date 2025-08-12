@@ -150,7 +150,10 @@ jobs:
           printf '%b\n' "# Scheduled Defaults Outputs Summary" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' ":octocat: Here is a summary of inputs set as string outputs that are used in workflows." >> $GITHUB_STEP_SUMMARY
 
+          printf '\n%b\n' "gcc_version: \`${gcc_version}\`" >> $GITHUB_STEP_SUMMARY
+          printf '\n%b\n' "binutils_version: \`${binutils_version}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "gnu_mirror_url: \`${gnu_mirror_url}\`" >> $GITHUB_STEP_SUMMARY
+
           printf '\n%b\n' "only_aarch64_runners: \`${only_aarch64_runners}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "only_x86_64_runners: \`${only_x86_64_runners}\`" >> $GITHUB_STEP_SUMMARY
           printf '\n%b\n' "aarch64_x86_64_runners: \`${aarch64_x86_64_runners}\`" >> $GITHUB_STEP_SUMMARY
