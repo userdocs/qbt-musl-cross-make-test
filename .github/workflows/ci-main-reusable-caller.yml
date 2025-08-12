@@ -82,9 +82,9 @@ jobs:
     permissions:
       contents: read
     outputs:
-      gcc_version: steps.set_mirror_url.outputs.gcc_version
-      binutils_version: steps.set_mirror_url.outputs.binutils_version
-      gnu_mirror_url: steps.set_mirror_url.outputs.gnu_mirror_url
+      gcc_version: ${{ steps.set_mirror_url.outputs.gcc_version }}
+      binutils_version: ${{ steps.set_mirror_url.outputs.binutils_version }}
+      gnu_mirror_url: ${{ steps.set_mirror_url.outputs.gnu_mirror_url }}
     steps:
       - name: Set mirror URL dynamically
         id: set_mirror_url
