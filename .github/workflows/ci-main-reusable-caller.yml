@@ -88,6 +88,8 @@ jobs:
     steps:
       - name: Set mirror URL dynamically
         id: set_mirror_url
+        env:
+          inputs_gnu_mirror_url: ${{ github.event.inputs.gnu_mirror_url || 'https://ftp.gnu.org/gnu' }}
         run: |
           # this helper script checks upstream gcc and binutils versions from sourceware then checks if gnu mirrors actually work
           # and if they work, do they actually have the latest versions assets we need.
@@ -96,7 +98,7 @@ jobs:
 
           printf '%s\n' "gcc_version=$(./simple-source gcc)" >> $GITHUB_OUTPUT
           printf '%s\n' "binutils_version=$(./simple-source binutils)" >> $GITHUB_OUTPUT
-          printf '%s\n' "gnu_mirror_url=$(./simple-source ${{ github.event.inputs.gnu_mirror_url || 'https://ftp.gnu.org/gnu'  }})" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "gnu_mirror_url=$(./simple-source ${inputs_gnu_mirror_url})" >> "$GITHUB_OUTPUT"
 
   scheduled_defaults:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
