@@ -83,8 +83,8 @@ jobs:
       contents: read
     outputs:
       gcc_version: steps.set_mirror_url.outputs.gcc_version
-      binutils_version:  steps.set_mirror_url.outputs.binutils_version
-      gnu_mirror_url: steps.set_mirror_url.outputs.gcc_version
+      binutils_version: steps.set_mirror_url.outputs.binutils_version
+      gnu_mirror_url: steps.set_mirror_url.outputs.gnu_mirror_url
     steps:
       - name: Set mirror URL dynamically
         id: set_mirror_url
@@ -98,7 +98,7 @@ jobs:
 
           printf '%s\n' "gcc_version=$(./simple-source gcc)" >> $GITHUB_OUTPUT
           printf '%s\n' "binutils_version=$(./simple-source binutils)" >> $GITHUB_OUTPUT
-          printf '%s\n' "gnu_mirror_url=$(./simple-source "${inputs_gnu_mirror_url}")" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "gnu_mirror_url=$(./simple-source "${inputs_gnu_mirror_url}")" >> $GITHUB_OUTPUT
 
   scheduled_defaults:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
@@ -173,6 +173,8 @@ jobs:
     with:
       bypass_update_check: ${{ needs.scheduled_defaults.outputs.bypass_update_check }}
       bypass_git_commit: ${{ needs.scheduled_defaults.outputs.bypass_git_commit }}
+      gcc_version: ${{ needs.scheduled_defaults.outputs.gcc_version }}
+      binutils_version: ${{ needs.scheduled_defaults.outputs.binutils_version }}
       gnu_mirror_url: ${{ needs.scheduled_defaults.outputs.gnu_mirror_url }}
 
   ci-bootstrap-matrix:
