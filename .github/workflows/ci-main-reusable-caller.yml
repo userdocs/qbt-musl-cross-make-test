@@ -96,9 +96,9 @@ jobs:
           curl -sL "https://raw.githubusercontent.com/userdocs/voding/refs/heads/main/musl-cross-make/simple-source" > simple-source
           chmod +x simple-source
 
-          printf '%s\n' "gcc_version=$(./simple-source gcc)" >> $GITHUB_OUTPUT
-          printf '%s\n' "binutils_version=$(./simple-source binutils)" >> $GITHUB_OUTPUT
-          printf '%s\n' "gnu_mirror_url=$(./simple-source "${inputs_gnu_mirror_url}")" >> $GITHUB_OUTPUT
+          printf '%s\n' "gcc_version=$(./simple-source gcc)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          printf '%s\n' "binutils_version=$(./simple-source binutils)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          printf '%s\n' "gnu_mirror_url=$(./simple-source "${inputs_gnu_mirror_url}")" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   scheduled_defaults:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
