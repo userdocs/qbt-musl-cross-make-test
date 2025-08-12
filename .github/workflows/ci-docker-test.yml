@@ -22,7 +22,7 @@ jobs:
     outputs:
       docker_test_matrix: ${{ steps.triples.outputs.docker_test_matrix }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Host - Bootstrap qemu
-        uses: userdocs/actions/qemu@14953114cb6e6734621fcb56513a9b751476b60f # v1.0.0
+        uses: userdocs/actions/qemu@e74d179578ddcf1cd07cd9eefd0915f33a3bd600 # v1.0.1
 
       - name: bootstrap
         run: >

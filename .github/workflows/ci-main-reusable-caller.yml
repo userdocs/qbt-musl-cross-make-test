@@ -6,7 +6,7 @@ on:
       gnu_mirror_url:
         description: "Which GNU mirror to use?"
         required: true
-        default: "https://ftp.gnu.org/gnu"
+        default: "https://ftp.gnu.org/gnu" # This is the workflow_dispatch url. change scheduled_defaults url used in scheduled workflows and source_urls.mak for fallback
         type: string
       only_aarch64_runners:
         description: "aarch64 matrix"
@@ -55,8 +55,8 @@ on:
         type: choice
         options: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-  # schedule:
-  #     - cron: "*/5 * * * *"
+  schedule:
+      - cron: "*/5 * * * *"
 
 jobs:
   skip_duplicate_job:
@@ -68,21 +68,46 @@ jobs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@f75f66ce1886f00957d99748a42c724f4330bdcf # v5
+        uses: fkirc/skip-duplicate-actions@f75f66ce1886f00957d99748a42c724f4330bdcf # v5.3.1
         with:
           concurrent_skipping: "always"
           cancel_others: "false"
           skip_after_successful_duplicate: false
           do_not_skip: ""
 
-  scheduled_defaults:
+  mirror_url:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
-    needs: [skip_duplicate_job]
+    needs: ["skip_duplicate_job"]
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
     outputs:
-      gnu_mirror_url: ${{ github.event.inputs.gnu_mirror_url || 'https://mirrors.dotsrc.org/gnu/'  }}
+      gcc_version: steps.set_mirror_url.outputs.gcc_version
+      binutils_version:  steps.set_mirror_url.outputs.binutils_version
+      gnu_mirror_url: steps.set_mirror_url.outputs.gcc_version
+    steps:
+      - name: Set mirror URL dynamically
+        id: set_mirror_url
+        run: |
+          # this helper script checks upstream gcc and binutils versions from sourceware then checks if gnu mirrors actually work
+          # and if they work, do they actually have the latest versions assets we need.
+          curl -sL "https://raw.githubusercontent.com/userdocs/voding/refs/heads/main/musl-cross-make/simple-source" > simple-source
+          chmod +x simple-source
+
+          printf '%s\n' "gcc_version=$(./simple-source gcc)" >> $GITHUB_OUTPUT
+          printf '%s\n' "binutils_version=$(./simple-source binutils)" >> $GITHUB_OUTPUT
+          printf '%s\n' "gnu_mirror_url=$(./simple-source ${{ github.event.inputs.gnu_mirror_url || 'https://ftp.gnu.org/gnu'  }})" >> "$GITHUB_OUTPUT"
+
+  scheduled_defaults:
+    if: needs.skip_duplicate_job.outputs.should_skip != 'true'
+    needs: ["skip_duplicate_job", "mirror_url"]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    outputs:
+      gcc_version: ${{ needs.mirror_url.outputs.gcc_version }}
+      binutils_version: ${{ needs.mirror_url.outputs.binutils_version }}
+      gnu_mirror_url: ${{ needs.mirror_url.outputs.gnu_mirror_url }}
       only_aarch64_runners: ${{ github.event.inputs.only_aarch64_runners || 'false' }}
       only_x86_64_runners: ${{ github.event.inputs.only_x86_64_runners || 'false' }}
       aarch64_x86_64_runners: ${{ github.event.inputs.aarch64_x86_64_runners || 'true' }}
@@ -92,6 +117,7 @@ jobs:
       bypass_git_commit: ${{ github.event.inputs.bypass_git_commit || 'false' }}
       skip_rerun: ${{ github.event.inputs.skip_rerun || 'false' }}
       retries: ${{ github.event.inputs.retries || '3' }}
+
     steps:
       - name: Setting Outputs from inputs
         run: |
@@ -104,6 +130,8 @@ jobs:
     permissions:
       contents: read
     env:
+      gcc_version: ${{ needs.scheduled_defaults.outputs.gcc_version }}
+      binutils_version: ${{ needs.scheduled_defaults.outputs.binutils_version }}
       gnu_mirror_url: ${{ needs.scheduled_defaults.outputs.gnu_mirror_url }}
       only_aarch64_runners: ${{ needs.scheduled_defaults.outputs.only_aarch64_runners }}
       only_x86_64_runners: ${{ needs.scheduled_defaults.outputs.only_x86_64_runners }}
@@ -133,7 +161,7 @@ jobs:
 
   ci-check-new-releases:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
-    needs: [skip_duplicate_job, scheduled_defaults]
+    needs: ["skip_duplicate_job", "scheduled_defaults"]
     concurrency:
       group: ci-check-new-releases
       cancel-in-progress: true
@@ -170,7 +198,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
@@ -333,7 +361,7 @@ jobs:
       retries: ${{ needs.scheduled_defaults.outputs.retries || '3' }}
       distinct_id: ${{ github.event.inputs.distinct_id }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
