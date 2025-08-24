@@ -55,8 +55,8 @@ on:
         type: choice
         options: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-  # schedule:
-  #     - cron: "*/5 * * * *"
+  schedule:
+      - cron: "*/5 * * * *"
 
 jobs:
   skip_duplicate_job:
@@ -91,14 +91,21 @@ jobs:
         env:
           inputs_gnu_mirror_url: ${{ github.event.inputs.gnu_mirror_url || 'https://ftp.gnu.org/gnu' }}
         run: |
-          # this helper script checks upstream gcc and binutils versions from sourceware then checks if gnu mirrors actually work
-          # and if they work, do they actually have the latest versions assets we need.
-          curl -sL "https://raw.githubusercontent.com/userdocs/voding/refs/heads/main/musl-cross-make/simple-source" > simple-source
-          chmod +x simple-source
+          # This helper script checks upstream gcc and binutils versions from sourceware then checks if gnu mirrors actually work
+          # It will try to use the mirror url provided in inputs and test if it works. If that fails it will try to use the script array to test the mirrors
+          # If they do work, we check if they actually have the latest version of gcc and binutils assets we need.
+          # Since it is getting version from upstream it is not relying on a mirror being updated to determine the latest version.
+          # Instead it checks if the mirror actually has the latest version assets we need since we know what the latest version is.
 
-          printf '%s\n' "gcc_version=$(./simple-source gcc)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-          printf '%s\n' "binutils_version=$(./simple-source binutils)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-          printf '%s\n' "gnu_mirror_url=$(./simple-source "${inputs_gnu_mirror_url}")" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          curl -sL "https://raw.githubusercontent.com/userdocs/voding/refs/heads/main/musl-cross-make/simple_source" -o simple_source
+          chmod +x simple_source
+
+          # simple upstream sourceware version outputs for gcc and binutils
+          printf '%s\n' "gcc_version=$(./simple_source gcc)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          printf '%s\n' "binutils_version=$(./simple_source binutils)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+          # Mirror tests. starting with the input mirror url and falling back to an array of mirrors
+          printf '%s\n' "gnu_mirror_url=$(./simple_source "${inputs_gnu_mirror_url}")" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   scheduled_defaults:
     if: needs.skip_duplicate_job.outputs.should_skip != 'true'
