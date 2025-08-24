@@ -32,7 +32,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - uses: userdocs/actions/qbt_docker@main
+      - name: Host - Bootstrap docker container
+        uses: userdocs/actions/qbt_docker@749d0010d8abde6c8a8ffc720856de5e799bdfea
         with:
             os_id: "alpine"
             os_version_id: "edge"
