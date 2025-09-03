@@ -55,14 +55,14 @@ jobs:
         run: |
           case "${runner_arch}" in
             X86 | X64)
-              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz"
+              arch="amd64"
               ;;
             ARM | ARM64)
-              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-arm64.tar.gz"
+              arch="arm64"
               ;;
           esac
 
-          curl -Lo- "${editorconfig_checker_url}" | tar xzf - --strip-components=1
-          ./ec-linux-amd64 --exclude '^(docs/.*|patches/.*)$' | sed 's/\x1b\[[0-9;]*m//g' | { printf '%b\n' '```bash' >> "$GITHUB_STEP_SUMMARY"; tee -a "$GITHUB_STEP_SUMMARY"; printf '%b\n' '```' >> "$GITHUB_STEP_SUMMARY"; }
+          curl -Lo- ""https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-${arch}.tar.gz" | tar xzf - --strip-components=1
+          ./ec-linux-${arch} --exclude '^(docs/.*|patches/.*)$' | sed 's/\x1b\[[0-9;]*m//g' | { printf '%b\n' '```bash' >> "$GITHUB_STEP_SUMMARY"; tee -a "$GITHUB_STEP_SUMMARY"; printf '%b\n' '```' >> "$GITHUB_STEP_SUMMARY"; }
           exit_code=("${PIPESTATUS[0]}")
           exit "${exit_code}"
