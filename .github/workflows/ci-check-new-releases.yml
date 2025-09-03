@@ -54,6 +54,7 @@ jobs:
       - name: boot strap
         id: boot_strap_release
         run: |
+          set -x
           ################# config.mak stuff ######################
 
           # Fast connectivity check with short timeout
