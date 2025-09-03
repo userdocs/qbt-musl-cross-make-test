@@ -45,7 +45,9 @@ jobs:
 
     steps:
       - name: Host - Bootstrap qemu
-        uses: userdocs/actions/qemu@749d0010d8abde6c8a8ffc720856de5e799bdfea # v1.0.2
+        uses: userdocs/actions/qemu@e8f57bd585c7bb6dcce011694d6772bab657abca # v1.0.7
+        with:
+          target_arch: ${{ matrix.arch_type }}
 
       - name: bootstrap
         run: >
