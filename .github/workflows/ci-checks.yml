@@ -51,8 +51,18 @@ jobs:
       - name: editorconfig-checker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          runner_arch: ${{ runner.arch }}
         run: |
-          curl -Lo- "https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz" | tar xzf - --strip-components=1
+          case "${runner_arch}" in
+            X86 | X64)
+              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz
+              ;;
+            ARM | ARM64)
+              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-arm64.tar.gz
+              ;;
+          esac
+
+          curl -Lo- "${editorconfig_checker_url}" | tar xzf - --strip-components=1
           ./ec-linux-amd64 --exclude '^(docs/.*|patches/.*)$' | sed 's/\x1b\[[0-9;]*m//g' | { printf '%b\n' '```bash' >> "$GITHUB_STEP_SUMMARY"; tee -a "$GITHUB_STEP_SUMMARY"; printf '%b\n' '```' >> "$GITHUB_STEP_SUMMARY"; }
           exit_code=("${PIPESTATUS[0]}")
           exit "${exit_code}"
