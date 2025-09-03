@@ -53,10 +53,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -Lo- "https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz" | tar xzf - --strip-components=1
-
-          printf '%b\n' "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          ./ec-linux-amd64 --exclude '^(docs/.*|patches/.*)$' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" >> $GITHUB_STEP_SUMMARY
+          ./ec-linux-amd64 --exclude '^(docs/.*|patches/.*)$' | sed 's/\x1b\[[0-9;]*m//g' | { printf '%b\n' '```bash' >> "$GITHUB_STEP_SUMMARY"; tee -a "$GITHUB_STEP_SUMMARY"; printf '%b\n' '```' >> "$GITHUB_STEP_SUMMARY"; }
           exit_code=("${PIPESTATUS[0]}")
-          printf '%b' "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-          # exit "${exit_code}"
+          exit "${exit_code}"
