@@ -98,7 +98,7 @@ jobs:
           # Instead it checks if the mirror actually has the latest version assets we need since we know what the latest version is.
 
           curl -sL "https://raw.githubusercontent.com/userdocs/voding/refs/heads/main/musl-cross-make/simple_source" -o simple_source
-          chmod +x simple_source -vv
+          chmod +x simple_source
 
           # simple upstream sourceware version outputs for gcc and binutils
           printf '%s\n' "gcc_version=$(./simple_source gcc)" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
