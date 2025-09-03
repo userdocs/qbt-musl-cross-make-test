@@ -54,13 +54,12 @@ jobs:
       - name: boot strap
         id: boot_strap_release
         run: |
-          set -x
           ################# config.mak stuff ######################
 
           # Fast connectivity check with short timeout
           if curl -sLIo /dev/null --fail --connect-timeout 5 --max-time 10 "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
             # Use git ls-remote with timeout
-            if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" 2>/dev/null | { read first_line; echo "$first_line"; } | awk '{ print substr($1,1,12) }' 2>/dev/null)"; then
+            if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" | awk 'NR==1 {print substr($1,1,12); exit}')"; then
               printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
               printf '%b\n\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed\` \n> config.sub commit hash retrieved via git-ls-remote" | tee -a $GITHUB_STEP_SUMMARY
             else
@@ -112,23 +111,12 @@ jobs:
           upstream_versions[CONFIG_SUB_REV]="${config_sub_upstream}"
           upstream_versions[GCC_VER]="${gcc_version}"
           upstream_versions[BINUTILS_VER]="${binutils_version}"
-          upstream_versions[MUSL_VER]="$(git ls-remote "https://git.musl-libc.org/git/musl" | { read first_line; echo "$first_line"; } | awk '{ print substr($1,1,12) }' || true)"
-          printf '%s\n' "DEBUG: MUSL_VER completed successfully: ${upstream_versions[MUSL_VER]}"
-          
-          upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | ssed -Rn 's|(.*)href="gmp-(.+?)\.tar\.xz"(.*)|\2|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
-          printf '%s\n' "DEBUG: GMP_VER completed successfully: ${upstream_versions[GMP_VER]}"
-          
-          upstream_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | ssed -Rn 's|(.*)href="mpc-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
-          printf '%s\n' "DEBUG: MPC_VER completed successfully: ${upstream_versions[MPC_VER]}"
-          
-          upstream_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | ssed -Rn 's|(.*)href="mpfr-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
-          printf '%s\n' "DEBUG: MPFR_VER completed successfully: ${upstream_versions[MPFR_VER]}"
-          
-          upstream_versions[LINUX_VER]="$(curl -sL "https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/" | ssed -Rn 's|(.*)href="linux-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
-          printf '%s\n' "DEBUG: LINUX_VER completed successfully: ${upstream_versions[LINUX_VER]}"
-          
-          upstream_versions[ISL_VER]="$(curl -sL https://sourceforge.net/projects/libisl/files | ssed -Rn 's|(.*)href="(.*)isl-(.+?)\.tar\.xz/download"(.*)|\3|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
-          printf '%s\n' "DEBUG: ISL_VER completed successfully: ${upstream_versions[ISL_VER]}"
+          upstream_versions[MUSL_VER]="$(git ls-remote "git://git.musl-libc.org/musl" | awk 'NR==1 {print substr($1,1,12); exit}')"
+          upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | ssed -Rn 's|(.*)href="gmp-(.+?)\.tar\.xz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | ssed -Rn 's|(.*)href="mpc-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | ssed -Rn 's|(.*)href="mpfr-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[LINUX_VER]="$(curl -sL "https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/" | ssed -Rn 's|(.*)href="linux-(.+?)\.tar\.gz"(.*)|\2|p' |sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[ISL_VER]="$(curl -sL https://sourceforge.net/projects/libisl/files | ssed -Rn 's|(.*)href="(.*)isl-(.+?)\.tar\.xz/download"(.*)|\3|p' | sort -rV | awk 'NR==1 {print; exit}')"
 
           # Verify the array entries and exit on failure
           for key in "${!upstream_versions[@]}"; do
