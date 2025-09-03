@@ -112,7 +112,7 @@ jobs:
           upstream_versions[CONFIG_SUB_REV]="${config_sub_upstream}"
           upstream_versions[GCC_VER]="${gcc_version}"
           upstream_versions[BINUTILS_VER]="${binutils_version}"
-          upstream_versions[MUSL_VER]="$(git ls-remote "https://git.musl-libc.org/git/musl" | { read first_line; echo "$first_line"; } | awk '{ print substr($1,1,12) }')"
+          upstream_versions[MUSL_VER]="$(git ls-remote "https://git.musl-libc.org/git/musl" | { read first_line; echo "$first_line"; } | awk '{ print substr($1,1,12) }' || true)"
           printf '%s\n' "DEBUG: MUSL_VER completed successfully: ${upstream_versions[MUSL_VER]}"
           
           upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | ssed -Rn 's|(.*)href="gmp-(.+?)\.tar\.xz"(.*)|\2|p' | sort -rV | { read first_line; echo "$first_line"; } || true)"
