@@ -284,7 +284,7 @@ jobs:
             printf '%b\n\n' "> [!WARNING]\n> Local file changes will be: \`committed\`" >> $GITHUB_STEP_SUMMARY
           fi
 
-          printf '%b\n' "# build_new_release?" >> $GITHUB_STEP_SUMMARY
+          printf '%b\n' "# Build new release?" >> $GITHUB_STEP_SUMMARY
           printf '%b\n' "build_new_release=${build_new_release}" | sed 's/\x1b\[[0-9;]*m//g' | { printf '%b\n' '```bash' >> "$GITHUB_STEP_SUMMARY"; tee -a "$GITHUB_STEP_SUMMARY"; printf '%b\n' '```' >> "$GITHUB_STEP_SUMMARY"; }
 
       # This step only runs of if steps.boot_strap_release.outputs.build_new_release == 'true'
