@@ -60,7 +60,7 @@ jobs:
           # Fast connectivity check with short timeout
           if curl -sLIo /dev/null --fail --connect-timeout 5 --max-time 10 "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD"; then
             # Use git ls-remote with timeout
-            if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" 2>/dev/null | head -n1 | awk '{ print substr($1,1,12) }' 2>/dev/null)"; then
+            if config_sub_upstream="$(timeout 30 git ls-remote "https://git.savannah.gnu.org/git/config.git" 2>/dev/null | { read first_line; echo "$first_line"; } | awk '{ print substr($1,1,12) }' 2>/dev/null)"; then
               printf '%s\n' "savannah.gnu.org is reachable, using git to get config.sub commit hash of remote version"
               printf '%b\n\n' "> [!NOTE]\n> \`config_mak_upstream_test:\` \`passed\` \n> config.sub commit hash retrieved via git-ls-remote" | tee -a $GITHUB_STEP_SUMMARY
             else
