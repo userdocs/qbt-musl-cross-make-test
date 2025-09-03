@@ -55,10 +55,10 @@ jobs:
         run: |
           case "${runner_arch}" in
             X86 | X64)
-              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz
+              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-amd64.tar.gz"
               ;;
             ARM | ARM64)
-              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-arm64.tar.gz
+              editorconfig_checker_url="https://github.com/editorconfig-checker/editorconfig-checker/releases/latest/download/ec-linux-arm64.tar.gz"
               ;;
           esac
 
