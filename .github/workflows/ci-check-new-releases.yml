@@ -48,9 +48,6 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - name: Install dependencies
-        run: sudo apt-get install -y ssed
-
       - name: boot strap
         id: boot_strap_release
         run: |
@@ -112,11 +109,11 @@ jobs:
           upstream_versions[GCC_VER]="${gcc_version}"
           upstream_versions[BINUTILS_VER]="${binutils_version}"
           upstream_versions[MUSL_VER]="$(git ls-remote "git://git.musl-libc.org/musl" | awk 'NR==1 {print substr($1,1,12); exit}')"
-          upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | ssed -Rn 's|(.*)href="gmp-(.+?)\.tar\.xz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
-          upstream_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | ssed -Rn 's|(.*)href="mpc-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
-          upstream_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | ssed -Rn 's|(.*)href="mpfr-(.+?)\.tar\.gz"(.*)|\2|p' | sort -rV | awk 'NR==1 {print; exit}')"
-          upstream_versions[LINUX_VER]="$(curl -sL "https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/" | ssed -Rn 's|(.*)href="linux-(.+?)\.tar\.gz"(.*)|\2|p' |sort -rV | awk 'NR==1 {print; exit}')"
-          upstream_versions[ISL_VER]="$(curl -sL https://sourceforge.net/projects/libisl/files | ssed -Rn 's|(.*)href="(.*)isl-(.+?)\.tar\.xz/download"(.*)|\3|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | sed -En 's|.*href="gmp-([^"]*).tar.xz".*|\1|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | sed -En 's|.*href="mpc-([^"]*).tar.gz".*|\1|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | sed -En 's|.*href="mpfr-([^"]*).tar.gz".*|\1|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[LINUX_VER]="$(curl -sL "https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/" | sed -En 's|.*href="linux-([^"]*).tar.gz".*|\1|p' | sort -rV | awk 'NR==1 {print; exit}')"
+          upstream_versions[ISL_VER]="$(curl -sL https://sourceforge.net/projects/libisl/files | sed -En 's|.*href=".*isl-([^"]*).tar.xz/download".*|\1|p' | sort -rV | awk 'NR==1 {print; exit}')"
 
           # Verify the array entries and exit on failure
           for key in "${!upstream_versions[@]}"; do
