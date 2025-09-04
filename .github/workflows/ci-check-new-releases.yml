@@ -109,7 +109,7 @@ jobs:
           upstream_versions[CONFIG_SUB_REV]="${config_sub_upstream}"
           upstream_versions[GCC_VER]="${gcc_version}"
           upstream_versions[BINUTILS_VER]="${binutils_version}"
-          upstream_versions[MUSL_VER]="$(git ls-remote "git://git.musl-libc.org/musl" | head -n1 | cut -c1-12)"
+          # upstream_versions[MUSL_VER]="$(git ls-remote "git://git.musl-libc.org/musl" | head -n1 | cut -c1-12)"
           upstream_versions[GMP_VER]="$(curl -sL "${gnu_mirror_url}/gmp/" | sed -En 's|.*href="gmp-([^"]*).tar.xz".*|\1|p' | sort -rV | head -n1)"
           upstream_versions[MPC_VER]="$(curl -sL "${gnu_mirror_url}/mpc/" | sed -En 's|.*href="mpc-([^"]*).tar.gz".*|\1|p' | sort -rV | head -n1)"
           upstream_versions[MPFR_VER]="$(curl -sL "${gnu_mirror_url}/mpfr/" | sed -En 's|.*href="mpfr-([^"]*).tar.gz".*|\1|p' | sort -rV | head -n1)"
