@@ -228,7 +228,6 @@ src_mold:
 	git clone --depth 1 --branch $(MOLD_BRANCH) $(MOLD_REPO) $@
 
 obj_mold/.lc_configured: | obj_mold src_mold
-	cd src_mold && sudo ./install-build-deps.sh
 	cmake -B obj_mold -S src_mold \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX= \
