@@ -4,12 +4,7 @@ OUTPUT = $(CURDIR)/output
 BINUTILS_SRCDIR = BINUTILS_SRCDIR_not_set
 GCC_SRCDIR = GCC_SRCDIR_not_set
 MUSL_SRCDIR = MUSL_SRCDIR_not_set
-
-# Linker selection: leave empty for binutils ld (default), set to "mold" to build and use mold
-CROSS_LINKER =
-
-MOLD_REPO = https://github.com/rui314/mold.git
-MOLD_BRANCH ?= stable
+MOLD_SRCDIR = MOLD_SRCDIR_not_set
 
 COMMON_CONFIG =
 BINUTILS_CONFIG =
@@ -214,8 +209,8 @@ install-gcc: | obj_gcc/.lc_built
 	cd obj_gcc && $(MAKE) MAKE="$(MAKE) $(LIBTOOL_ARG)" DESTDIR=$(DESTDIR)$(OUTPUT) install
 	ln -sf $(TARGET)-gcc $(DESTDIR)$(OUTPUT)/bin/$(TARGET)-cc
 
-# Mold linker - conditionally built when CROSS_LINKER=mold
-ifeq ($(CROSS_LINKER),mold)
+# Mold linker - conditionally built when MOLD_SRCDIR is provided
+ifneq ($(MOLD_SRCDIR),MOLD_SRCDIR_not_set)
 
 all: mold
 install: install-mold
@@ -224,11 +219,11 @@ mold: obj_mold/.lc_built
 
 .PHONY: mold install-mold
 
-src_mold:
-	git clone --depth 1 --branch $(MOLD_BRANCH) $(MOLD_REPO) $@
+mold_src: | $(MOLD_SRCDIR)
+	ln -sf $(MOLD_SRCDIR) $@
 
-obj_mold/.lc_configured: | obj_mold src_mold
-	cmake -B obj_mold -S src_mold \
+obj_mold/.lc_configured: | obj_mold mold_src
+	cmake -B obj_mold -S mold_src \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX= \
 		-DCMAKE_C_FLAGS="$(OPTIMIZATION_FLAGS) $(SECURITY_FLAGS)" \

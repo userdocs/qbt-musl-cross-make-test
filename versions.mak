@@ -14,3 +14,5 @@ MPC_VER = 1.3.1
 MPFR_VER = 4.2.2
 LINUX_VER = 6.19.9
 ISL_VER = 0.27
+# MOLD_VER = branch or tag
+MOLD_VER = stable

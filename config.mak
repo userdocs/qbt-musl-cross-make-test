@@ -90,6 +90,4 @@ GCC_CONFIG += --disable-lto
 # GCC configuration for target - modified by workflow or build-helper.bash using triples.json
 GCC_CONFIG_FOR_TARGET +=
 
-# Cross linker selection: leave empty or unset for binutils ld (default)
-# Set to \"mold\" to build and install mold as the cross compiler linker
-CROSS_LINKER = mold
+
