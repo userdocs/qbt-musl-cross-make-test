@@ -138,7 +138,7 @@ extract_all: | $(SRC_DIRS)
 ifneq ($(MOLD_VER),)
 mold_src:
 	rm -rf $@.tmp
-	git clone --depth 1 --branch $(MOLD_VER) $(MOLD_REPO) $@.tmp
+	git clone --depth 1 --branch v$(MOLD_VER) $(MOLD_REPO) $@.tmp
 	mv $@.tmp $@
 endif
 
