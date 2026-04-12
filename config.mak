@@ -61,6 +61,7 @@ BINUTILS_CONFIG += --enable-plugins
 BINUTILS_CONFIG += --disable-gprofng
 BINUTILS_CONFIG += --disable-gdb
 BINUTILS_CONFIG += --disable-gold
+BINUTILS_CONFIG += --disable-shared
 
 # GCC configuration
 
