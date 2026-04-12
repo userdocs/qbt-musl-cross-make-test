@@ -37,13 +37,14 @@ COMMON_CONFIG += LDFLAGS="${LINKER_FLAGS}"
 # enable
 COMMON_CONFIG += --enable-default-pie
 COMMON_CONFIG += --enable-static
+COMMON_CONFIG += --enable-shared
 COMMON_CONFIG += --enable-static-pie
 COMMON_CONFIG += --enable-pic
 COMMON_CONFIG += --enable-threads
 COMMON_CONFIG += --enable-lto
 # with
 COMMON_CONFIG += --with-pic
-COMMON_CONFIG += --with-system-zlib
+# Use GCC's bundled zlib (not host system zlib) for cross-compiler portability
 # disable
 COMMON_CONFIG += --disable-werror
 COMMON_CONFIG += --disable-multilib
@@ -75,8 +76,6 @@ GCC_CONFIG += --enable-libquadmath-support
 GCC_CONFIG += --enable-initfini-array
 GCC_CONFIG += --enable-plugin
 # with
-GCC_CONFIG += --with-stage1-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
-GCC_CONFIG += --with-boot-ldflags="${TOOLCHAIN_STATIC_FLAGS}"
 GCC_CONFIG += --with-default-libstdcxx-abi=new
 GCC_CONFIG += --with-linker-hash-style=gnu
 # disable
