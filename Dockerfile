@@ -20,7 +20,10 @@ LABEL org.opencontainers.image.base.name="alpine:edge" \
 ENV CHOST=${ARCH}
 ENV CC=${ARCH}-gcc
 ENV CXX=${ARCH}-g++
-ENV AR=${ARCH}-ar
+ENV AR=${ARCH}-gcc-ar
+ENV NM=${ARCH}-gcc-nm
+ENV RANLIB=${ARCH}-gcc-ranlib
+
 ENV QBT_MCM_DOCKER="YES"
 ENV QBT_MCM_TARGET="${ARCH}"
 ENV QBT_CROSS_NAME="${QBT_CROSS_NAME}"
