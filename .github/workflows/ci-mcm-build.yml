@@ -41,7 +41,7 @@ jobs:
             autoconf automake bash bison build-base cmake curl
             findutils flex git libarchive-tools libtool
             linux-headers patch perl pkgconf rsync
-            tar texinfo xz zip zlib zlib-dev
+            tar texinfo xz zip zlib-dev
           custom_docker_commands: |
             -e GNU_MIRROR_URL=${{ inputs.gnu_mirror_url }}
 
