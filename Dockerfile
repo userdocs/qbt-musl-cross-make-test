@@ -39,7 +39,7 @@ RUN case "$TARGETPLATFORM" in \
         libtool make perl python3-dev \
         py3-numpy py3-numpy-dev libc-dev musl-dev \
         sudo nano linux-headers ttf-freefont \
-        graphviz re2c xz ninja-build ninja-is-really-ninja \
+        graphviz re2c xz zlib ninja-build ninja-is-really-ninja \
     && curl -Lo- "${BASE_URL}/${URL_PREFIX}-${ARCH}.tar.xz" | tar xJf - --strip-components=1 -C /usr/local \
     && cd /usr/local/bin \
     && for f in ${ARCH}-*; do ln -s "$f" "${f#${ARCH}-}"; done
