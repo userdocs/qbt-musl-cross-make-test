@@ -4,16 +4,18 @@ ARG TARGETPLATFORM
 ARG ARCH
 ARG BASE_URL
 ARG QBT_CROSS_NAME
+ARG GH_REPO
+ARG GH_REPO_NAME
 
 # Add metadata labels for easy parsing
 LABEL org.opencontainers.image.base.name="alpine:edge" \
       org.opencontainers.image.base.id="alpine" \
       org.opencontainers.image.base.codename="edge" \
-      org.opencontainers.image.title="qbt-musl-cross-make-test" \
+      org.opencontainers.image.title="${GH_REPO_NAME}" \
       org.opencontainers.image.description="musl cross build toolchains" \
-      org.opencontainers.image.source="https://github.com/userdocs/qbt-musl-cross-make-test" \
-      org.opencontainers.image.url="https://github.com/userdocs/qbt-musl-cross-make-test" \
-      org.opencontainers.image.documentation="https://github.com/userdocs/qbt-musl-cross-make-test/blob/main/README.md" \
+      org.opencontainers.image.source="https://github.com/${GH_REPO}" \
+      org.opencontainers.image.url="https://github.com/${GH_REPO}" \
+      org.opencontainers.image.documentation="https://github.com/${GH_REPO}/blob/main/README.md" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="userdocs"
 
